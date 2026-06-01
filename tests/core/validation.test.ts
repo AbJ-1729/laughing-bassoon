@@ -117,18 +117,38 @@ describe('validatePuzzle §5.1/§5.3', () => {
     expect(codes(p)).toContain('UNKNOWN_CELL');
   });
 
-  it('rejects a same-category binary clue (SAME_CATEGORY)', () => {
+  it('rejects a self-referential binary clue (SAME_CELL)', () => {
+    // §5.3: a value cannot be compared to itself (identical category AND value).
     const p = puzzle({
       clues: [
         {
           id: 1,
           type: 'C2',
           x: { category: 'Pet', value: 'Cat' },
-          y: { category: 'Pet', value: 'Dog' },
+          y: { category: 'Pet', value: 'Cat' },
         },
       ],
     });
-    expect(codes(p)).toContain('SAME_CATEGORY');
+    expect(codes(p)).toContain('SAME_CELL');
+  });
+
+  it('permits a same-category, different-value binary clue', () => {
+    // The real validator allows same-category/different-value relations
+    // (e.g. "green is immediately left of white"); only identical cells are
+    // rejected. Such a clue is well-formed even if it makes the puzzle UNSAT.
+    const r = validatePuzzle(
+      puzzle({
+        clues: [
+          {
+            id: 1,
+            type: 'C5',
+            x: { category: 'Color', value: 'Red' },
+            y: { category: 'Color', value: 'Green' },
+          },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
   });
 
   it('rejects a position out of range in C3 (POSITION_OUT_OF_RANGE)', () => {

@@ -66,6 +66,17 @@ spec. They are recorded here for transparency.
    `n × (k−1)n`. We render the standard logic-grid pairwise matrix consistent
    with this, with the position category as one fixed axis.
 
+7. **Deduction-chain length on the zebra puzzle.** §8.2 sets a ≤30-step target
+   for canned puzzles' deduction chains. The small examples meet it easily, but
+   Einstein's 5×5/6-category zebra produces ~60 steps because the engine emits a
+   distinct, individually-cited **R2 bijection step** per placement (faithful to
+   §5.6's R2 template, which is phrased per value/position). This is the
+   "explanations may be non-minimal" item in §11's risk register — the steps are
+   all correct and cited; reducing verbosity (e.g. folding bijection
+   consequences into the triggering step) is a tuning follow-up. The integration
+   test asserts the ≤30 target on the small examples and citation-resolution on
+   all, including the zebra.
+
 ## C. Things deliberately NOT assumed
 
 - No clue types beyond the 9 in §5.3 (§2.2 / §5.3 are explicit).

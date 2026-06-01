@@ -199,10 +199,14 @@ function validateClueArguments(clue: Clue, index: PuzzleIndex): ValidationError[
         clueId: clue.id,
       });
     }
-    if (clue.x.category === clue.y.category) {
+    // §5.3: "X ≠ Y — comparing a value to itself is rejected." Only identical
+    // cells (same category AND value) are forbidden; same-category/different-
+    // value clues are permitted — they are required to express the canonical
+    // Einstein puzzle (§6.2), e.g. "green house is immediately left of white".
+    if (clue.x.category === clue.y.category && clue.x.value === clue.y.value) {
       errors.push({
-        code: 'SAME_CATEGORY',
-        message: `Clue ${clue.id}: X and Y must reference different categories.`,
+        code: 'SAME_CELL',
+        message: `Clue ${clue.id}: X and Y must be different — a value cannot be compared to itself.`,
         clueId: clue.id,
       });
     }

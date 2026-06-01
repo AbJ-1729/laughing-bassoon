@@ -38,9 +38,16 @@ spec. They are recorded here for transparency.
    §5.4's variable definition which excludes it).
 
 3. **Clue self-reference rule.** §5.3 says `X ≠ Y` and parenthetically
-   "(different categories)". We interpret the binding rule as: `X` and `Y` must
-   reference **different categories** (not merely different cells). Comparing two
-   values of the same category is rejected at validation.
+   "(different categories — comparing a value to itself is rejected)". These two
+   readings conflict, and §6.2's **mandatory** "Einstein's classic zebra"
+   example is decisive: that puzzle requires the clue *"the green house is
+   immediately left of the white house"*, which relates two values of the same
+   category (Color). A "different categories" rule would make the required
+   example unbuildable. We therefore bind `X ≠ Y` as **different cells**: only
+   an identical (category, value) pair is rejected (error `SAME_CELL`).
+   Same-category/different-value binary clues are permitted; the CNF encoding
+   (§5.4) handles them correctly (e.g. a same-category C1 is simply
+   unsatisfiable, surfacing via the MUS path).
 
 4. **LLM model + proxy.** §4 specifies "Anthropic Claude API (Sonnet) via
    lightweight Node proxy." The proxy reads `ANTHROPIC_API_KEY` from the

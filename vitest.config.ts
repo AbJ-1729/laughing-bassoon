@@ -11,6 +11,12 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: [],
+    // The MiniSat WASM module (logic-solver) carries global state that is not
+    // safe to share across parallel worker threads; run files serially in one
+    // fork for deterministic results.
+    fileParallelism: false,
+    pool: 'forks',
+    poolOptions: { forks: { singleFork: true } },
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'src/**/*.test.ts'],
     coverage: {
       provider: 'v8',

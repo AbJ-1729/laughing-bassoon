@@ -21,6 +21,15 @@ export interface ClueHandler {
   encode(clue: Clue, ctx: EncodeContext): Clause[];
   /** Optional type-specific validation beyond the shared checks. */
   validate?(clue: Clue, index: PuzzleIndex): ValidationError[];
+  /**
+   * For binary clues: the allowed relationship between position(X) and
+   * position(Y). The inference engine (§5.6) uses this for relation-based
+   * constraint propagation — another behaviour composed per clue type rather
+   * than branched on in the engine. Absent for the unary clues C3/C4.
+   */
+  relation?(positionX: number, positionY: number): boolean;
+  /** Which inference rule label a propagation from this clue reports as (§5.6). */
+  readonly inferenceRule?: 'R3' | 'R4' | 'R5';
 }
 
 // --- small shared helpers ---------------------------------------------------
@@ -46,6 +55,8 @@ function forEachPosition(
 const C1: ClueHandler = {
   type: 'C1',
   name: 'Equality',
+  inferenceRule: 'R4',
+  relation: (px, py) => px === py,
   describe: (c) => `${label(vx(c))} is ${label(vy(c))}.`,
   // for each p: (¬X_p ∨ Y_p) and (X_p ∨ ¬Y_p)  — biconditional same position.
   encode: (c, ctx) =>
@@ -58,6 +69,8 @@ const C1: ClueHandler = {
 const C2: ClueHandler = {
   type: 'C2',
   name: 'Inequality',
+  inferenceRule: 'R4',
+  relation: (px, py) => px !== py,
   describe: (c) => `${label(vx(c))} is not ${label(vy(c))}.`,
   // for each p: (¬X_p ∨ ¬Y_p)
   encode: (c, ctx) =>
@@ -122,6 +135,8 @@ const C4: ClueHandler = {
 const C5: ClueHandler = {
   type: 'C5',
   name: 'Immediately left of',
+  inferenceRule: 'R5',
+  relation: (px, py) => px + 1 === py,
   describe: (c) => `${label(vx(c))} is immediately left of ${label(vy(c))}.`,
   // for p∈[1,n−1]: (¬X_p ∨ Y_{p+1}); plus ¬X_n.
   encode: (c, ctx) => {
@@ -139,6 +154,8 @@ const C5: ClueHandler = {
 const C6: ClueHandler = {
   type: 'C6',
   name: 'Immediately right of',
+  inferenceRule: 'R5',
+  relation: (px, py) => px - 1 === py,
   describe: (c) => `${label(vx(c))} is immediately right of ${label(vy(c))}.`,
   // X imm right of Y ⇔ Y imm left of X. Mirror of C5 with roles swapped.
   encode: (c, ctx) => {
@@ -156,6 +173,8 @@ const C6: ClueHandler = {
 const C7: ClueHandler = {
   type: 'C7',
   name: 'Next to',
+  inferenceRule: 'R3',
+  relation: (px, py) => Math.abs(px - py) === 1,
   describe: (c) => `${label(vx(c))} is next to ${label(vy(c))}.`,
   // for each p: (¬X_p ∨ Y_{p−1} ∨ Y_{p+1}); out-of-range literals omitted.
   encode: (c, ctx) =>
@@ -170,6 +189,8 @@ const C7: ClueHandler = {
 const C8: ClueHandler = {
   type: 'C8',
   name: 'Somewhere left of',
+  inferenceRule: 'R5',
+  relation: (px, py) => px < py,
   describe: (c) => `${label(vx(c))} is somewhere left of ${label(vy(c))}.`,
   // for each p: (¬X_p ∨ Y_{p+1} ∨ ... ∨ Y_n); plus ¬X_n.
   encode: (c, ctx) => {
@@ -187,6 +208,8 @@ const C8: ClueHandler = {
 const C9: ClueHandler = {
   type: 'C9',
   name: 'Somewhere right of',
+  inferenceRule: 'R5',
+  relation: (px, py) => px > py,
   describe: (c) => `${label(vx(c))} is somewhere right of ${label(vy(c))}.`,
   // X right of Y ⇔ Y left of X. Mirror of C8.
   encode: (c, ctx) => {

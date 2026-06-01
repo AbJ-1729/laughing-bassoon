@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/types/logic-solver.d.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/core/assignment.ts","./src/core/encoder.ts","./src/core/mus.ts","./src/core/pipeline.ts","./src/core/puzzle-index.ts","./src/core/sat.ts","./src/core/types.ts","./src/core/validation.ts","./src/core/clues/context.ts","./src/core/clues/handlers.ts","./src/core/clues/registry.ts","./src/types/logic-solver.d.ts"],"version":"5.9.3"}

@@ -40,6 +40,8 @@ interface EngineContext {
   readonly oracle: Assignment;
   /** Step number that last modified a cell, for citations. */
   lastStepFor(cell: Cell): number | undefined;
+  /** Step number that removed position `p` from `cell`, for precise citations. */
+  elimStepFor(cell: Cell, p: number): number | undefined;
 }
 
 interface Rule {
@@ -66,6 +68,22 @@ function joinPositions(positions: number[]): string {
   const sorted = [...positions].sort((a, b) => a - b);
   if (sorted.length === 1) return String(sorted[0]);
   return `${sorted.slice(0, -1).join(', ')} or ${sorted[sorted.length - 1]}`;
+}
+
+/**
+ * Sentence fragment announcing any placements a step produces as a side effect,
+ * so that every pinned fact is *stated* by the step that derives it (§5.6
+ * "complete proof"). Without this, a bijection elimination could silently pin a
+ * cell that a later step then cites as an established premise.
+ */
+function placementsSuffix(facts: Fact[]): string {
+  if (facts.length === 0) return '';
+  const parts = facts.map((f) => `${f.value} at position ${f.position}`);
+  const joined =
+    parts.length === 1
+      ? parts[0]
+      : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+  return `, which places ${joined}`;
 }
 
 // --- R1: direct assignment / elimination from a clue ------------------------
@@ -125,13 +143,14 @@ const R2: Rule = {
       if (siblings.length > 0) {
         for (const s of siblings) state.eliminate(s, p);
         const cited = ctx.lastStepFor(cell);
+        const facts = newFactsFor(state, siblings);
         return {
           rule: 'R2',
-          englishSentence: `Since ${cell.value} is at position ${p}, no other ${cell.category} can be at position ${p}.`,
+          englishSentence: `Since ${cell.value} is at position ${p}, no other ${cell.category} can be at position ${p}${placementsSuffix(facts)}.`,
           citedClues: [],
           citedSteps: cited !== undefined ? [cited] : [],
           affectedCells: siblings,
-          newFacts: newFactsFor(state, siblings),
+          newFacts: facts,
         };
       }
     }
@@ -146,11 +165,11 @@ const R2: Rule = {
         if (state.isPinned(cell)) continue; // already placed elsewhere-consistent
         const removed = [...state.possible(cell)].filter((q) => q !== p);
         for (const q of removed) state.eliminate(cell, q);
-        // Cite the steps that eliminated the other values from this position.
+        // Cite the steps that removed each competing value from THIS position.
         const cited = new Set<number>();
         for (const v of cat.values) {
           if (v === cell.value) continue;
-          const s = ctx.lastStepFor({ category: cat.name, value: v });
+          const s = ctx.elimStepFor({ category: cat.name, value: v }, p);
           if (s !== undefined) cited.add(s);
         }
         return {
@@ -295,6 +314,7 @@ function snapshot(state: KnowledgeState): PositionSnapshot {
 export function explain(puzzle: Puzzle, oracle: Assignment): Explanation {
   const state = new KnowledgeState(puzzle);
   const lastStep = new Map<string, number>();
+  const elimStep = new Map<string, number>(); // `${cellKey}#${pos}` → step
   const steps: DeductionStep[] = [];
   const snapshots: PositionSnapshot[] = [snapshot(state)];
 
@@ -304,6 +324,7 @@ export function explain(puzzle: Puzzle, oracle: Assignment): Explanation {
     state,
     oracle,
     lastStepFor: (cell) => lastStep.get(cellKey(cell)),
+    elimStepFor: (cell, p) => elimStep.get(`${cellKey(cell)}#${p}`),
   };
 
   // Safety bound: each step removes ≥1 candidate; total candidates ≤ n²·(k−1).
@@ -317,8 +338,17 @@ export function explain(puzzle: Puzzle, oracle: Assignment): Explanation {
         for (const cell of proposed.affectedCells) {
           lastStep.set(cellKey(cell), stepNumber);
         }
+        // Record which positions this step removed from each cell (provenance).
+        const prev = snapshots[snapshots.length - 1];
+        const snap = snapshot(state);
+        for (const cell of state.cells) {
+          const key = cellKey(cell);
+          for (const pos of prev[key]) {
+            if (!snap[key].includes(pos)) elimStep.set(`${key}#${pos}`, stepNumber);
+          }
+        }
         steps.push({ ...proposed, stepNumber });
-        snapshots.push(snapshot(state));
+        snapshots.push(snap);
         fired = true;
         break; // restart from highest priority (§5.6)
       }

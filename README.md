@@ -90,11 +90,13 @@ npm run build        # → dist/
 npm run start        # serves dist/ + /api on http://localhost:8787
 ```
 
-To enable the natural-language clue path, set an API key before `npm run start`:
+To enable the natural-language clue path, set an OpenRouter key before
+`npm run start` (the proxy uses OpenRouter for budget reasons — see
+[`ASSUMPTIONS.md`](ASSUMPTIONS.md) §A.3):
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...     # optional; app works fully without it
-export ANTHROPIC_MODEL=claude-sonnet-4-6 # optional override
+export OPENROUTER_API_KEY=sk-or-...                 # optional; app works fully without it
+export OPENROUTER_MODEL=anthropic/claude-3.5-sonnet # optional; default is the cheaper claude-3.5-haiku
 ```
 
 For a long-lived deployment, run `npm run start` under a process manager

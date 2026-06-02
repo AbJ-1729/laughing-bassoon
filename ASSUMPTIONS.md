@@ -22,6 +22,18 @@ spec. They are recorded here for transparency.
    `Abhijai Chugh <abhijai.chugh@gmail.com>` with no co-author trailers, per
    explicit instruction.
 
+3. **LLM provider — OpenRouter, not the Anthropic API directly.** SPECS §4
+   specifies the *Anthropic Claude API (Sonnet)*. Per the owner's budget
+   constraint, the proxy instead calls **OpenRouter** (an OpenAI-compatible
+   gateway) at `https://openrouter.ai/api/v1/chat/completions`, reading
+   `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (default
+   `anthropic/claude-3.5-haiku` — a budget-friendly model adequate for
+   one-sentence→JSON parsing; set `anthropic/claude-3.5-sonnet` for the
+   spec-intended Sonnet accuracy). The clue-parsing contract is unchanged: the
+   model must return one of the 9 clue types or `{error}`, the server now
+   *enforces* that the returned `type` is one of C1–C9, the user still confirms
+   every parse, and the app remains fully usable offline.
+
 ## B. Genuine ambiguities in SPECS.md
 
 1. **`n` upper bound.** §5.1 says the position category has values `1..n` and a

@@ -4,6 +4,7 @@
  * focused; solving is delegated to the worker client (§5.5).
  */
 import { create } from 'zustand';
+import { isBinaryClue } from '../core/types';
 import type { Cell, Clue, Puzzle } from '../core/types';
 import { solveInWorker, type SolveOutcome } from '../worker/client';
 import { EXAMPLES } from '../examples';
@@ -73,6 +74,9 @@ function withClearedSolve(patch: Partial<AppState>): Partial<AppState> {
   return { report: null, stepIndex: 0, highlightedCells: [], editingClueId: null, ...patch };
 }
 
+// Module-level counter to detect stale solve results (S2 concurrency guard).
+let _solveSeq = 0;
+
 export const useStore = create<AppState>()((set, get) => ({
   puzzle: EXAMPLES[0].puzzle,
   report: null,
@@ -97,17 +101,23 @@ export const useStore = create<AppState>()((set, get) => ({
       });
     }),
 
-  removeCategory: (name) =>
+  removeCategory: (name) => {
+    const s = get();
+    if (name === s.puzzle.positionCategory) return;
+    const affected = s.puzzle.clues.filter((c) => clueReferencesCategory(c, name));
+    if (
+      affected.length > 0 &&
+      !window.confirm(
+        `Removing "${name}" will also delete ${affected.length} clue(s) that reference it. Continue?`,
+      )
+    ) return;
     set((s) => {
-      if (name === s.puzzle.positionCategory) return s; // never remove position axis
+      if (name === s.puzzle.positionCategory) return s;
       const categories = s.puzzle.categories.filter((c) => c.name !== name);
-      const clues = s.puzzle.clues.filter(
-        (c) => !clueReferencesCategory(c, name),
-      );
-      return withClearedSolve({
-        puzzle: { ...s.puzzle, categories, clues: reindex(clues) },
-      });
-    }),
+      const clues = s.puzzle.clues.filter((c) => !clueReferencesCategory(c, name));
+      return withClearedSolve({ puzzle: { ...s.puzzle, categories, clues: reindex(clues) } });
+    });
+  },
 
   renameCategory: (oldName, newName) =>
     set((s) => {
@@ -123,21 +133,42 @@ export const useStore = create<AppState>()((set, get) => ({
       });
     }),
 
-  setPositionCategory: (name) =>
+  setPositionCategory: (name) => {
+    const s = get();
+    const target = s.puzzle.categories.find((c) => c.name === name);
+    if (!target) return;
+    const oldN = positionCount(s.puzzle);
+    const newN = target.values.length;
+    if (
+      newN !== oldN &&
+      !window.confirm(
+        `Switching position category will resize the puzzle from ${oldN} to ${newN} positions. ` +
+          `Some values and clues may be removed. Continue?`,
+      )
+    ) return;
     set((s) => {
-      const n = positionCount(s.puzzle);
-      const categories = s.puzzle.categories.map((c) => ({
-        ...c,
-        isPosition: c.name === name,
-        values:
-          c.name === name
-            ? Array.from({ length: n }, (_, i) => String(i + 1))
-            : c.values,
-      }));
-      return withClearedSolve({
-        puzzle: { ...s.puzzle, positionCategory: name, categories },
+      const tgt = s.puzzle.categories.find((c) => c.name === name)!;
+      const n = tgt.values.length;
+      // Promote target to position axis; resize all other categories to n.
+      const categories = s.puzzle.categories.map((c) => {
+        if (c.name === name)
+          return { ...c, isPosition: true, values: Array.from({ length: n }, (_, i) => String(i + 1)) };
+        const vals = c.values.slice(0, n);
+        while (vals.length < n) vals.push(`${c.name.replace(/\s+/g, '')}${vals.length + 1}`);
+        return { ...c, isPosition: false, values: vals };
       });
-    }),
+      // Drop clues referencing values that were truncated away or with k > n.
+      const valid = new Set(categories.flatMap((c) => c.values.map((v) => `${c.name}\0${v}`)));
+      const clues = reindex(
+        s.puzzle.clues.filter((clue) => {
+          if (!valid.has(`${clue.x.category}\0${clue.x.value}`)) return false;
+          if (isBinaryClue(clue)) return valid.has(`${clue.y.category}\0${clue.y.value}`);
+          return clue.k <= n; // positional clue: ensure k is still in range
+        }),
+      );
+      return withClearedSolve({ puzzle: { ...s.puzzle, positionCategory: name, categories, clues } });
+    });
+  },
 
   addValue: (category, value) =>
     set((s) => {
@@ -149,18 +180,23 @@ export const useStore = create<AppState>()((set, get) => ({
       return withClearedSolve({ puzzle: { ...s.puzzle, categories } });
     }),
 
-  removeValue: (category, value) =>
+  removeValue: (category, value) => {
+    const s = get();
+    const affected = s.puzzle.clues.filter((c) => clueReferencesCell(c, { category, value }));
+    if (
+      affected.length > 0 &&
+      !window.confirm(
+        `Removing "${value}" will also delete ${affected.length} clue(s) that reference it. Continue?`,
+      )
+    ) return;
     set((s) => {
       const categories = s.puzzle.categories.map((c) =>
         c.name === category ? { ...c, values: c.values.filter((v) => v !== value) } : c,
       );
-      const clues = s.puzzle.clues.filter(
-        (c) => !clueReferencesCell(c, { category, value }),
-      );
-      return withClearedSolve({
-        puzzle: { ...s.puzzle, categories, clues: reindex(clues) },
-      });
-    }),
+      const clues = s.puzzle.clues.filter((c) => !clueReferencesCell(c, { category, value }));
+      return withClearedSolve({ puzzle: { ...s.puzzle, categories, clues: reindex(clues) } });
+    });
+  },
 
   renameValue: (category, oldVal, newVal) =>
     set((s) => {
@@ -229,9 +265,11 @@ export const useStore = create<AppState>()((set, get) => ({
   loadPuzzle: (puzzle) => set(withClearedSolve({ puzzle })),
 
   solve: async () => {
+    const seq = ++_solveSeq;
     set({ solving: true, report: null, stepIndex: 0, highlightedCells: [] });
-    const report = await solveInWorker(get().puzzle);
-    set({ report, solving: false, stepIndex: 0 });
+    const outcome = await solveInWorker(get().puzzle);
+    if (seq !== _solveSeq) return; // superseded by a newer solve
+    set({ report: outcome, solving: false, stepIndex: 0 });
   },
 
   setStepIndex: (i) => {

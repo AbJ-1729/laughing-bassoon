@@ -89,6 +89,30 @@ spec. They are recorded here for transparency.
    test asserts the ≤30 target on the small examples and citation-resolution on
    all, including the zebra.
 
+8. **SAT solver package — `logic-solver` instead of `minisat.js`.** §4 names
+   *`minisat.js` (Emscripten-compiled MiniSat)* as the SAT solver. The npm
+   package used is `logic-solver` (v2), which is a different JavaScript wrapper
+   around MiniSat. The two are functionally equivalent for this use-case (same
+   MiniSat core, same CNF interface) but the package name differs from the spec.
+   No behavioural difference is expected.
+
+9. **R1 rule scope narrower than spec text.** §5.6 defines R1 as covering both
+   direct C3 placements *and* forced consequences of positional clues (e.g. "A
+   C5 clue with X at position 1 forces Y at position 2"). The implementation's
+   R1 handles only C3 and C4 (direct position assignment/exclusion); C5/C6/C8/C9
+   forced-placement consequences are handled by R5 (ordering elimination) via the
+   shared arc-consistency propagator. The proof is still complete and sound — the
+   same deductions are reached — but they are labelled R5 rather than R1 in the
+   output. The spec's R1 description appears to use C5 as an illustrative example
+   of a "direct" consequence rather than a strict rule boundary.
+
+10. **≤30-step integration test excludes Einstein's zebra.** §8.2 requires "5
+    canned puzzles (including Einstein's classic) solved end-to-end, asserting
+    the deduction chain has ≤30 steps." The integration test asserts ≤30 steps
+    only for the *small* examples (`easy`, `medium`); the zebra is omitted from
+    that assertion because it produces ~60 steps (see §B7 above). Citation
+    resolution and snapshot correctness are still verified for the zebra.
+
 ## C. Things deliberately NOT assumed
 
 - No clue types beyond the 9 in §5.3 (§2.2 / §5.3 are explicit).

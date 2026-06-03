@@ -13,6 +13,7 @@
  * The app is fully usable without this server's LLM route; structured input,
  * solving and explanation are entirely client-side.
  */
+import 'dotenv/config'; // loads .env (if present) before anything reads process.env
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -111,7 +112,10 @@ app.post('/api/parse', async (req, res) => {
 // Serve the built SPA (after `npm run build`).
 const dist = path.resolve(__dirname, '..', 'dist');
 app.use(express.static(dist));
-app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+// Return JSON 404 for unmatched /api/* so the SPA never receives API errors as HTML.
+app.all('/api/*', (_req, res) => res.status(404).json({ error: 'Not found' }));
+// SPA fallback: only for non-/api paths.
+app.get(/^(?!\/api)/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 
 app.listen(PORT, () => {
   console.log(`Logic-grid app on http://localhost:${PORT}  (LLM proxy: ${API_KEY ? 'on' : 'off'})`);

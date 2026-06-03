@@ -76,9 +76,13 @@ export async function exportGridPng(node: HTMLElement, title: string): Promise<v
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(img, 0, 0);
-  canvas.toBlob((blob) => {
-    if (blob) download(`${slug(title)}-grid.png`, blob);
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => {
+      if (b) resolve(b);
+      else reject(new Error('toBlob returned null — canvas may be tainted by cross-origin content'));
+    });
   });
+  download(`${slug(title)}-grid.png`, blob);
 }
 
 /** Copy computed styles from the live tree onto the clone (recursively). */

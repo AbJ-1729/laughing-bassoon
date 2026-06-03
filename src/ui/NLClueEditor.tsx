@@ -13,6 +13,7 @@ import type { Clue } from '../core/types';
 export default function NLClueEditor() {
   const puzzle = useStore((s) => s.puzzle);
   const addClue = useStore((s) => s.addClue);
+  const setMode = useStore((s) => s.setMode);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Extract<ParseResult, { ok: true }> | null>(null);
@@ -70,7 +71,19 @@ export default function NLClueEditor() {
         {busy ? 'Interpreting…' : 'Interpret'}
       </button>
 
-      {error && <p className="text-xs text-rose-600">{error}</p>}
+      {error && (
+        <div className="space-y-1">
+          <p className="text-xs text-rose-600">{error}</p>
+          {(error.includes('unavailable') || error.includes('timed out')) && (
+            <button
+              onClick={() => setMode('structured')}
+              className="text-xs text-sky-600 underline"
+            >
+              Switch to structured input
+            </button>
+          )}
+        </div>
+      )}
 
       {pending && (
         <div className="space-y-2 rounded bg-sky-50 p-2">

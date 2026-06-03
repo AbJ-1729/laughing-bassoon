@@ -62,45 +62,102 @@ React + TypeScript + Vite · Tailwind CSS · Zustand · `logic-solver`
 (Emscripten-compiled MiniSat) in a Web Worker · Express LLM proxy · Vitest +
 Playwright.
 
-## Develop
+## Running locally
+
+### Prerequisites
+
+- **Node.js 18+** and **npm** (check: `node -v && npm -v`)
+- Run once after cloning: `npm install`
+
+---
+
+### Mode 1 — Development (hot reload, two terminals)
+
+Use this when actively changing code. Vite serves the frontend with instant
+hot-module replacement; the Express proxy is only needed if you want the
+natural-language clue input.
+
+**Terminal 1 — frontend (required)**
 
 ```bash
-npm install
-npm run dev          # Vite dev server on http://localhost:5173
-npm run server:dev   # (optional) LLM proxy on :8787, for the NL clue path
+npm run dev
+# → http://localhost:5173
 ```
+
+**Terminal 2 — LLM proxy (optional)**
+
+Only needed for the "Natural language" clue-entry mode. Without it the app
+works fully; the NL button is simply disabled.
+
+1. Copy `.env.example` to `.env` and paste your key (get one free at
+   [openrouter.ai/keys](https://openrouter.ai/keys)):
+
+```bash
+# .env  (gitignored — never commit this file)
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_MODEL=anthropic/claude-3.5-haiku   # default; use claude-3.5-sonnet for higher accuracy
+```
+
+2. Start the proxy — it picks up `.env` automatically:
+
+```bash
+npm run server:dev
+# → proxy listening on http://localhost:8787/api/parse
+# Vite (port 5173) proxies /api/* to :8787 automatically via vite.config.ts
+```
+
+---
+
+### Mode 2 — Production build (single server, one terminal)
+
+Use this to run the app exactly as it is deployed: the Express server serves
+the compiled static bundle **and** hosts the `/api/parse` endpoint on one port.
+
+```bash
+npm run build   # compiles TypeScript + Vite → dist/
+npm run start   # reads .env automatically → http://localhost:8787
+```
+
+For a long-lived deployment wrap with a process manager:
+
+```bash
+# pm2
+pm2 start "npm run start" --name logic-grid
+
+# nohup
+nohup npm run start &
+
+# systemd — create a unit file pointing to `npm run start`
+```
+
+---
+
+### Quick-reference: all commands
+
+| Command | What it does | URL |
+|---------|-------------|-----|
+| `npm run dev` | Vite dev server with HMR | http://localhost:5173 |
+| `npm run server:dev` | Express LLM proxy (watch mode) | http://localhost:8787 |
+| `npm run build` | TypeScript + Vite production build → `dist/` | — |
+| `npm run start` | Express serves `dist/` + `/api` | http://localhost:8787 |
+| `npm test` | Vitest unit + integration + property tests | — |
+| `npm run test:coverage` | Same + coverage report | — |
+| `npm run typecheck` | TypeScript type check (no emit) | — |
+| `npm run e2e` | Playwright end-to-end (see below) | — |
+
+---
 
 ## Test
 
 ```bash
-npm test             # Vitest unit + integration + property (§8.1/8.2/8.4)
-npm run test:coverage
-npm run e2e          # Playwright end-to-end (§8.3); needs `npx playwright install chromium`
-npm run typecheck
+npm test                        # Vitest: 102 unit/integration/property tests
+npm run test:coverage           # same + coverage report in coverage/
+npm run typecheck               # must be clean — run before committing
+
+# Playwright e2e (needs Chromium installed once):
+npx playwright install chromium
+npm run e2e                     # runs against the dev server (see playwright.config.ts)
 ```
-
-## Build & deploy (on this machine)
-
-This app is deployed **on this server** (not Vercel — see
-[`ASSUMPTIONS.md`](ASSUMPTIONS.md)). The Express server serves the built static
-bundle and hosts the LLM proxy:
-
-```bash
-npm run build        # → dist/
-npm run start        # serves dist/ + /api on http://localhost:8787
-```
-
-To enable the natural-language clue path, set an OpenRouter key before
-`npm run start` (the proxy uses OpenRouter for budget reasons — see
-[`ASSUMPTIONS.md`](ASSUMPTIONS.md) §A.3):
-
-```bash
-export OPENROUTER_API_KEY=sk-or-...                 # optional; app works fully without it
-export OPENROUTER_MODEL=anthropic/claude-3.5-sonnet # optional; default is the cheaper claude-3.5-haiku
-```
-
-For a long-lived deployment, run `npm run start` under a process manager
-(systemd, pm2, or `nohup`), optionally behind nginx on port 80/443.
 
 ## Data format
 

@@ -52,7 +52,14 @@ export default function GridPane() {
       <div className="flex gap-2">
         <button
           className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
-          onClick={() => gridRef.current && exportGridPng(gridRef.current, puzzle.title ?? 'grid')}
+          onClick={async () => {
+            if (!gridRef.current) return;
+            try {
+              await exportGridPng(gridRef.current, puzzle.title ?? 'grid');
+            } catch (err) {
+              alert(`PNG export failed: ${err instanceof Error ? err.message : String(err)}`);
+            }
+          }}
         >
           Export grid PNG
         </button>
@@ -79,13 +86,14 @@ function Grid({
   const positions = Array.from({ length: n }, (_, i) => i + 1);
 
   return (
-    <table className="border-collapse text-sm" role="grid" aria-label="Logic grid">
+    <table className="border-collapse text-sm" aria-label="Logic grid">
       <thead>
         <tr>
-          <th className="sticky left-0 bg-slate-100 p-1 text-left">{puzzle.positionCategory}</th>
+          <th scope="col" className="sticky left-0 bg-slate-100 p-1 text-left">{puzzle.positionCategory}</th>
           {attrCats.map((cat) => (
             <th
               key={cat.name}
+              scope="col"
               colSpan={cat.values.length}
               className="border border-slate-200 bg-slate-100 p-1 text-center"
             >
@@ -94,11 +102,12 @@ function Grid({
           ))}
         </tr>
         <tr>
-          <th className="sticky left-0 bg-slate-50 p-1" />
+          <th scope="col" className="sticky left-0 bg-slate-50 p-1" />
           {attrCats.flatMap((cat) =>
             cat.values.map((v) => (
               <th
                 key={`${cat.name}.${v}`}
+                scope="col"
                 className="border border-slate-200 bg-slate-50 p-1 text-center text-xs font-medium"
                 title={`${cat.name}: ${v}`}
               >
@@ -111,7 +120,7 @@ function Grid({
       <tbody>
         {positions.map((p) => (
           <tr key={p}>
-            <th className="sticky left-0 bg-slate-100 p-1 text-center font-semibold">{p}</th>
+            <th scope="row" className="sticky left-0 bg-slate-100 p-1 text-center font-semibold">{p}</th>
             {attrCats.flatMap((cat) =>
               cat.values.map((v) => {
                 const mark = markFor(snapshot, cat.name, v, p);
@@ -120,7 +129,6 @@ function Grid({
                 return (
                   <td
                     key={`${cat.name}.${v}.${p}`}
-                    role="gridcell"
                     aria-label={`${cat.name} ${v} at position ${p}: ${mark}`}
                     className={`h-8 w-8 border border-slate-200 text-center ${MARK_CLASS[mark]} ${
                       hl ? 'outline outline-2 outline-amber-400' : ''
@@ -222,7 +230,11 @@ function PlaybackBar() {
       className="flex items-center gap-2"
       role="group"
       aria-label="Step playback"
-      onKeyDown={onKey}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.preventDefault();
+        onKey(e);
+      }}
     >
       <PlayBtn label="First step" disabled={disabled} onClick={() => setStepIndex(0)}>⏮</PlayBtn>
       <PlayBtn label="Previous step" disabled={disabled} onClick={() => setStepIndex(stepIndex - 1)}>◀</PlayBtn>

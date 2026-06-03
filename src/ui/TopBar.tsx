@@ -2,11 +2,12 @@
  * Top bar (SPECS §6.2): Examples menu, JSON import/export, and the Solve button
  * with status feedback (§6.3).
  */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useStore } from '../store/store';
 import { EXAMPLES } from '../examples';
 import { exportPuzzleJson } from './export';
 import type { Puzzle } from '../core/types';
+import { validatePuzzle } from '../core/validation';
 
 export default function TopBar() {
   const puzzle = useStore((s) => s.puzzle);
@@ -16,18 +17,38 @@ export default function TopBar() {
   const loadExample = useStore((s) => s.loadExample);
   const loadPuzzle = useStore((s) => s.loadPuzzle);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const onImport = async (file: File) => {
+    setImportError(null);
+    let parsed: unknown;
     try {
-      const puzzle = JSON.parse(await file.text()) as Puzzle;
-      loadPuzzle(puzzle);
+      parsed = JSON.parse(await file.text());
     } catch {
-      alert('Could not read that file as a puzzle JSON.');
+      setImportError('Could not read that file as JSON.');
+      return;
     }
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      !Array.isArray((parsed as Record<string, unknown>).categories) ||
+      !Array.isArray((parsed as Record<string, unknown>).clues) ||
+      typeof (parsed as Record<string, unknown>).positionCategory !== 'string'
+    ) {
+      setImportError('Invalid puzzle file: missing required fields (categories, positionCategory, clues).');
+      return;
+    }
+    const result = validatePuzzle(parsed as Puzzle);
+    if (!result.ok) {
+      setImportError(`Puzzle is invalid: ${result.errors[0].message}`);
+      return;
+    }
+    loadPuzzle(parsed as Puzzle);
   };
 
   const solved = report?.status === 'unique';
   return (
+    <>
     <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2">
       <h1 className="text-lg font-semibold">Logic-Grid Puzzle Solver</h1>
 
@@ -84,5 +105,12 @@ export default function TopBar() {
         {solving ? 'Solving…' : solved ? '✓ Solved' : 'Solve'}
       </button>
     </header>
+    {importError && (
+      <div role="alert" className="flex items-center justify-between border-b border-rose-200 bg-rose-50 px-4 py-1.5 text-sm text-rose-700">
+        <span>{importError}</span>
+        <button onClick={() => setImportError(null)} className="ml-4 text-xs underline">dismiss</button>
+      </div>
+    )}
+    </>
   );
 }

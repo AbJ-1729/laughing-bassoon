@@ -18,6 +18,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "logic-solver": "^2.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

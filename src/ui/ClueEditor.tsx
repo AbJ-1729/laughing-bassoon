@@ -3,8 +3,8 @@
  * clue types via the registry — no hard-coded list. Binary clues pick X and Y
  * cells; C3/C4 pick a cell and a position.
  */
-import { useMemo, useState } from 'react';
-import type { Cell, Clue, ClueType } from '../core/types';
+import { useEffect, useMemo, useState } from 'react';
+import type { BinaryClue, Cell, Clue, ClueType, PositionalClue } from '../core/types';
 import { clueTypes, getClueHandler } from '../core/clues/registry';
 import { useStore } from '../store/store';
 
@@ -13,6 +13,9 @@ const POSITIONAL: ClueType[] = ['C3', 'C4'];
 export default function ClueEditor() {
   const puzzle = useStore((s) => s.puzzle);
   const addClue = useStore((s) => s.addClue);
+  const updateClue = useStore((s) => s.updateClue);
+  const editingClueId = useStore((s) => s.editingClueId);
+  const cancelEditClue = useStore((s) => s.cancelEditClue);
   const attrCats = puzzle.categories;
 
   const firstCell = useMemo<Cell>(
@@ -29,6 +32,21 @@ export default function ClueEditor() {
   const [y, setY] = useState<Cell>(secondCell);
   const [k, setK] = useState(1);
 
+  // When entering edit mode, load the selected clue into the form (§6.1 edit).
+  const editingClue = puzzle.clues.find((c) => c.id === editingClueId);
+  useEffect(() => {
+    if (!editingClue) return;
+    setType(editingClue.type);
+    setX(editingClue.x);
+    if (editingClue.type === 'C3' || editingClue.type === 'C4') {
+      setK((editingClue as PositionalClue).k);
+    } else {
+      setY((editingClue as BinaryClue).y);
+    }
+    // Only re-run when the edited clue changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingClueId]);
+
   const isPositional = POSITIONAL.includes(type);
   const n =
     puzzle.categories.find((c) => c.name === puzzle.positionCategory)?.values
@@ -38,7 +56,8 @@ export default function ClueEditor() {
     const clue = isPositional
       ? ({ type, x, k } as Omit<Clue, 'id'>)
       : ({ type, x, y } as Omit<Clue, 'id'>);
-    addClue(clue);
+    if (editingClueId !== null) updateClue(editingClueId, clue);
+    else addClue(clue);
   };
 
   return (
@@ -78,12 +97,22 @@ export default function ClueEditor() {
         <CellPicker label="Y" cell={y} onChange={setY} />
       )}
 
-      <button
-        onClick={submit}
-        className="w-full rounded bg-slate-800 px-2 py-1 text-sm text-white hover:bg-slate-700"
-      >
-        Add clue
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={submit}
+          className="flex-1 rounded bg-slate-800 px-2 py-1 text-sm text-white hover:bg-slate-700"
+        >
+          {editingClueId !== null ? 'Save changes' : 'Add clue'}
+        </button>
+        {editingClueId !== null && (
+          <button
+            onClick={cancelEditClue}
+            className="rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   );
 }

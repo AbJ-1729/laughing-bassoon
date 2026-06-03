@@ -18,6 +18,8 @@ interface AppState {
   stepIndex: number;
   mode: EntryMode;
   highlightedCells: Cell[];
+  /** Clue currently being edited in the structured editor (§6.1 edit), or null. */
+  editingClueId: number | null;
 
   setMode: (mode: EntryMode) => void;
   setPuzzleMeta: (meta: { title?: string; description?: string }) => void;
@@ -34,6 +36,8 @@ interface AppState {
   updateClue: (id: number, clue: Omit<Clue, 'id'>) => void;
   removeClue: (id: number) => void;
   moveClue: (id: number, dir: -1 | 1) => void;
+  beginEditClue: (id: number) => void;
+  cancelEditClue: () => void;
 
   loadExample: (id: string) => void;
   loadPuzzle: (puzzle: Puzzle) => void;
@@ -65,7 +69,8 @@ function reindex(clues: Clue[]): Clue[] {
 
 /** Keep the position category sized "1".."n" and reset stale solve state. */
 function withClearedSolve(patch: Partial<AppState>): Partial<AppState> {
-  return { report: null, stepIndex: 0, highlightedCells: [], ...patch };
+  // Structural changes also exit clue-edit mode (clue ids may be reindexed).
+  return { report: null, stepIndex: 0, highlightedCells: [], editingClueId: null, ...patch };
 }
 
 export const useStore = create<AppState>()((set, get) => ({
@@ -75,6 +80,7 @@ export const useStore = create<AppState>()((set, get) => ({
   stepIndex: 0,
   mode: 'structured',
   highlightedCells: [],
+  editingClueId: null,
 
   setMode: (mode) => set({ mode }),
 
@@ -211,6 +217,9 @@ export const useStore = create<AppState>()((set, get) => ({
       [clues[idx], clues[swap]] = [clues[swap], clues[idx]];
       return withClearedSolve({ puzzle: { ...s.puzzle, clues: reindex(clues) } });
     }),
+
+  beginEditClue: (id) => set({ editingClueId: id, mode: 'structured' }),
+  cancelEditClue: () => set({ editingClueId: null }),
 
   loadExample: (id) => {
     const ex = EXAMPLES.find((e) => e.id === id);

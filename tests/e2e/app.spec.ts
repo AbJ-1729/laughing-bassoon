@@ -54,6 +54,24 @@ test('ill-formed puzzle is rejected with a clear error', async ({ page }) => {
   await expect(page.getByText(/not well-formed/i).first()).toBeVisible({ timeout: 15_000 });
 });
 
+test('clue editing: load a clue, change it, save (§6.1)', async ({ page }) => {
+  await loadExample(page, /Coffee Shop/);
+  await expect(page.getByText('Ann is at position 1.')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit clue 1' }).click();
+  // The structured editor loads the clue; change the position to 2 and save.
+  await page.getByLabel('Position', { exact: true }).selectOption('2');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Ann is at position 2.')).toBeVisible();
+  await expect(page.getByText('Ann is at position 1.')).toHaveCount(0);
+});
+
+test('description field is editable (§5.1)', async ({ page }) => {
+  await loadExample(page, /Coffee Shop/);
+  const desc = page.getByLabel('Puzzle description');
+  await desc.fill('My custom description');
+  await expect(desc).toHaveValue('My custom description');
+});
+
 test('natural-language path: interpret, confirm, add clue (mocked LLM)', async ({ page }) => {
   await page.route('**/api/parse', async (route) => {
     await route.fulfill({

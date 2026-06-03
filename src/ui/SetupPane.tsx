@@ -13,6 +13,8 @@ export default function SetupPane() {
   const puzzle = useStore((s) => s.puzzle);
   const mode = useStore((s) => s.mode);
   const setMode = useStore((s) => s.setMode);
+  const editingClueId = useStore((s) => s.editingClueId);
+  const beginEditClue = useStore((s) => s.beginEditClue);
   const {
     setPuzzleMeta,
     addCategory,
@@ -35,6 +37,15 @@ export default function SetupPane() {
           onChange={(e) => setPuzzleMeta({ title: e.target.value })}
           className="w-full rounded border border-slate-300 p-1 text-sm font-semibold"
           placeholder="Puzzle title"
+        />
+        <textarea
+          aria-label="Puzzle description"
+          value={puzzle.description ?? ''}
+          onChange={(e) => setPuzzleMeta({ description: e.target.value })}
+          rows={2}
+          maxLength={500}
+          className="mt-1 w-full rounded border border-slate-300 p-1 text-xs"
+          placeholder="Description (optional)"
         />
       </section>
 
@@ -127,7 +138,9 @@ export default function SetupPane() {
           {puzzle.clues.map((clue, i) => (
             <li
               key={clue.id}
-              className="flex items-start gap-1 rounded border border-slate-200 p-1 text-sm"
+              className={`flex items-start gap-1 rounded border p-1 text-sm ${
+                editingClueId === clue.id ? 'border-amber-400 bg-amber-50' : 'border-slate-200'
+              }`}
             >
               <span className="w-4 text-xs text-slate-400">{clue.id}</span>
               <span className="flex-1">
@@ -138,6 +151,13 @@ export default function SetupPane() {
                   </span>
                 )}
               </span>
+              <button
+                aria-label={`Edit clue ${clue.id}`}
+                onClick={() => beginEditClue(clue.id)}
+                className="px-1 hover:bg-slate-100"
+              >
+                ✎
+              </button>
               <button
                 aria-label={`Move clue ${clue.id} up`}
                 disabled={i === 0}

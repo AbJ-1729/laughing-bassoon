@@ -12,6 +12,9 @@ async function optionLabel(page: Page, name: RegExp): Promise<string> {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Destructive edits (e.g. removing a value that clues reference) now prompt a
+  // confirm() before pruning clues; auto-accept so flows proceed.
+  page.on('dialog', (d) => d.accept().catch(() => {}));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Logic-Grid Puzzle Solver' })).toBeVisible();
 });

@@ -5,31 +5,11 @@ by priority.
 
 ---
 
-## 1. Verify the two new e2e tests in-browser
-The `clue editing` and `description field` Playwright tests are written and
-committed but were last blocked by a Vite dev-server crash, so they're
-unverified.
-- [ ] Start the dev server (`npm run dev`) and confirm it stays up on :5173.
-- [ ] `npx playwright test` — confirm all 7 specs pass (esp. the 2 new ones).
-- [ ] If the dev server is flaky, point Playwright's `webServer` at the prod
-      build (`npm run build && npm run start`, port 8787) instead.
-
-## 2. shadcn/ui retrofit (§4 — largest remaining spec gap)
-The §4 stack lists "Tailwind CSS + shadcn/ui" but the UI is hand-rolled
-Tailwind. Retrofit shadcn/ui:
-- [ ] `npx shadcn@latest init` (configure for Vite: `components.json`, the `cn`
-      util, CSS variables, Tailwind tokens; `@` alias already exists).
-- [ ] Add primitives: Button, Select, Input, Textarea, Tabs, Slider, Card.
-- [ ] Refactor `TopBar`, `SetupPane`, `ClueEditor`, `NLClueEditor`, `GridPane`,
-      `DeductionPane` to use them. Keep ARIA roles/labels so Playwright
-      selectors (getByRole/getByLabel) still resolve.
-- [ ] Re-run `npx playwright test` and `npm run test` after the refactor.
-
-## 3. Verify ≥80% test coverage (§12 deliverable)
+## 1. Verify ≥80% test coverage (§12 deliverable)
 - [ ] `npm run test:coverage` — check line coverage on `src/core/encoder.ts`,
       `src/worker/client.ts`, and `src/core/inference/`. Fix gaps if below 80%.
 
-## 4. Low-priority polish (optional)
+## 2. Low-priority polish (optional)
 - [ ] MUS verbal explanation: add C1-equality positive propagation so the
       classic `X is Y` + `X is not Y` conflict pinpoints an empty cell instead
       of the generic fallback. (`inference/mus-explain.ts`)
@@ -44,6 +24,15 @@ Tailwind. Retrofit shadcn/ui:
 ---
 
 ## Completed
+
+### shadcn/ui retrofit (§4) — done
+- [x] shadcn/ui initialised; primitives in `src/components/ui/`
+      (Button, Input, Textarea, Label, Select, Tabs, Slider, Card).
+- [x] Configured for the project's **Tailwind v3** (HSL tokens, classic
+      component source) since the current CLI targets Tailwind v4.
+- [x] All panes refactored (`TopBar`, `SetupPane`, `ClueEditor`,
+      `NLClueEditor`, `GridPane`, `DeductionPane`, `App`).
+- [x] e2e selectors updated for Radix Select; **7/7 e2e + 126 unit pass**.
 
 ### Robustness / spec fixes (done this session)
 - [x] **H1 — JSON import validation.** Structural guard + `validatePuzzle` + `version===1`

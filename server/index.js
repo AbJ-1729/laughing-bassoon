@@ -23,10 +23,10 @@ const app = express();
 app.use(express.json({ limit: '64kb' }));
 
 const PORT = process.env.PORT || 8787;
-// OpenRouter (OpenAI-compatible). Model is configurable; the default is a
-// budget-friendly model adequate for one-sentence→JSON parsing. Override with
-// OPENROUTER_MODEL (e.g. 'anthropic/claude-3.5-sonnet') for higher accuracy.
-const MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-haiku';
+// OpenRouter (OpenAI-compatible). SPECS §4 specifies Claude "Sonnet"; the
+// default is the current Sonnet. Override with OPENROUTER_MODEL (e.g. a cheaper
+// 'anthropic/claude-3.5-haiku') if desired. ~$0.003/parse → ~3.7k parses per $10.
+const MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-sonnet-4.6';
 const API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const VALID_TYPES = new Set(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']);

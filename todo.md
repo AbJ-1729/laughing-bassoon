@@ -46,34 +46,38 @@ Tailwind. Retrofit shadcn/ui:
 ## Completed
 
 ### Robustness / spec fixes (done this session)
-- [x] **H1 — JSON import validation.** `TopBar.tsx` now runs a structural guard
-      + `validatePuzzle` before `loadPuzzle`; shows a dismissable inline banner
-      on failure and keeps current state. (`TopBar.tsx`)
-- [x] **H2 — `setPositionCategory` cardinality desync.** Now uses target
-      category's own value count as the new `n`; resizes all other categories
-      (truncates or pads); prunes out-of-range C3/C4 clues; shows a confirm
-      dialog if `n` changes. (`store.ts`)
-- [x] **Solve concurrency guard.** Module-level `_solveSeq` counter; stale
-      results are silently dropped. (`store.ts`)
-- [x] **Silent clue loss feedback.** `removeCategory` and `removeValue` now
-      call `window.confirm()` before pruning dependent clues. (`store.ts`)
-- [x] **Playback arrow keys (§6.4).** `tabIndex={0}` on the playback group div;
-      arrow keys call `preventDefault()` to avoid double-stepping the slider.
-      (`GridPane.tsx`)
-- [x] **Grid ARIA semantics.** Dropped `role="grid"`/`role="gridcell"`; added
-      `scope="col"` to all column headers and `scope="row"` to row headers.
-      (`GridPane.tsx`)
-- [x] **PNG export error handling.** `canvas.toBlob` wrapped in a proper
-      `Promise`; call site `await`s and surfaces errors via `alert`. (`export.ts`,
-      `GridPane.tsx`)
-- [x] **Server `/api/*` 404.** SPA catch-all scoped to non-`/api` paths; added
-      a JSON 404 for unmatched `/api/*`. (`server/index.js`)
-- [x] **LLM timeout fallback (§9).** NL clue editor now shows a "Switch to
-      structured input" button when the proxy is unavailable or timed out.
-      (`NLClueEditor.tsx`)
-- [x] **Documented new assumptions.** R1 rule scope (narrower than spec text),
-      ≤30-step test gap for zebra, and `logic-solver` vs `minisat.js` package
-      name added to `ASSUMPTIONS.md`. (`ASSUMPTIONS.md`)
+- [x] **H1 — JSON import validation.** Structural guard + `validatePuzzle` + `version===1`
+      check before `loadPuzzle`; dismissable inline banner on failure. (`TopBar.tsx`)
+- [x] **H2 — `setPositionCategory` cardinality desync.** Uses target category's own
+      value count; resizes all categories; prunes out-of-range clues; confirms if n changes. (`store.ts`)
+- [x] **H-A — Duplicate value rename blocked.** `renameValue` now checks for existing
+      name in the same category before updating. (`store.ts`)
+- [x] **H-B — `addValue` upper bound.** Capped at n=8; blocks adding to position
+      category. (`store.ts`)
+- [x] **H-C — Stale ClueEditor on edit cancel.** Form resets to defaults when
+      `editingClueId` becomes null (e.g. rename mid-edit). (`ClueEditor.tsx`)
+- [x] **H-D — LLM unknown clue type crash.** `VALID_CLUE_TYPES` guard in
+      `nl-client.ts` before cast reaches `getClueHandler`. (`nl-client.ts`)
+- [x] **M-B — Category count cap.** `addCategory` blocked at 6. (`store.ts`)
+- [x] **M-C — Category count floor.** `removeCategory` blocked when total ≤ 3. (`store.ts`)
+- [x] **M-D — Import version check.** Rejects files with `version !== 1`. (`TopBar.tsx`)
+- [x] **M-E — `isPosition` cross-validation.** `validatePuzzle` now errors if any
+      category has `isPosition: true` but isn't the declared `positionCategory`. (`validation.ts`)
+- [x] **M-F — Stale CellPicker.** Auto-corrects category and value when the referenced
+      cell disappears due to a rename or remove. (`ClueEditor.tsx`)
+- [x] **M-G — NL fallback button.** "Switch to structured input" shown on any NL
+      error, not just timeout/unavailable. (`NLClueEditor.tsx`)
+- [x] **M-H — ARIA tab pattern.** Mode toggle panel has `role="tabpanel"`,
+      `aria-controls`, `aria-labelledby`. (`SetupPane.tsx`)
+- [x] **M-J — Empty category name.** `validatePuzzle` rejects empty/whitespace names. (`validation.ts`)
+- [x] **Solve concurrency guard.** Module-level `_solveSeq`; stale results dropped. (`store.ts`)
+- [x] **Silent clue loss feedback.** `removeCategory`/`removeValue` confirm before
+      pruning clues. (`store.ts`)
+- [x] **Playback arrow keys.** `tabIndex={0}` + `preventDefault()`. (`GridPane.tsx`)
+- [x] **Grid ARIA.** `scope="col"`/`"row"` on headers; dropped `role="grid"`. (`GridPane.tsx`)
+- [x] **PNG export errors surfaced.** `canvas.toBlob` properly awaited. (`export.ts`)
+- [x] **Server `/api/*` 404.** JSON 404 for unmatched API routes. (`server/index.js`)
+- [x] **dotenv.** Server reads `.env` automatically; `.env.example` committed.
 
 ### Earlier work (pre-session)
 - [x] Inference completeness §5.6 (R2–R5 side-effect placements, R2 citations)

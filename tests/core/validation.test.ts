@@ -233,4 +233,132 @@ describe('validatePuzzle §5.1/§5.3', () => {
       }
     }
   });
+
+  // --- New validation rules added to cover audit-identified gaps ---
+
+  it('rejects duplicate category names (DUPLICATE_CATEGORY)', () => {
+    const p = puzzle({
+      categories: [
+        { name: 'Pos', values: ['1', '2', '3'], isPosition: true },
+        { name: 'Pet', values: ['Cat', 'Dog', 'Bird'] },
+        { name: 'Pet', values: ['Red', 'Green', 'Blue'] }, // duplicate name
+      ],
+    });
+    expect(codes(p)).toContain('DUPLICATE_CATEGORY');
+  });
+
+  it('rejects an empty category name (EMPTY_CATEGORY_NAME)', () => {
+    const p = puzzle({
+      categories: [
+        { name: '', values: ['1', '2', '3'], isPosition: true },
+        { name: 'Pet', values: ['Cat', 'Dog', 'Bird'] },
+        { name: 'Color', values: ['Red', 'Green', 'Blue'] },
+      ],
+    });
+    expect(codes(p)).toContain('EMPTY_CATEGORY_NAME');
+  });
+
+  it('rejects a whitespace-only category name (EMPTY_CATEGORY_NAME)', () => {
+    const p = puzzle({
+      categories: [
+        { name: 'Pos', values: ['1', '2', '3'], isPosition: true },
+        { name: '   ', values: ['Cat', 'Dog', 'Bird'] },
+        { name: 'Color', values: ['Red', 'Green', 'Blue'] },
+      ],
+    });
+    expect(codes(p)).toContain('EMPTY_CATEGORY_NAME');
+  });
+
+  it('rejects isPosition:true on a non-positionCategory category (POSITION_FLAG_MISMATCH)', () => {
+    const p = puzzle({
+      positionCategory: 'Pos',
+      categories: [
+        { name: 'Pos', values: ['1', '2', '3'], isPosition: true },
+        { name: 'Pet', values: ['Cat', 'Dog', 'Bird'], isPosition: true },
+        { name: 'Color', values: ['Red', 'Green', 'Blue'] },
+      ],
+    });
+    expect(codes(p)).toContain('POSITION_FLAG_MISMATCH');
+  });
+
+  it('rejects multiple categories with isPosition:true (MULTIPLE_POSITION_CATEGORIES)', () => {
+    const p = puzzle({
+      positionCategory: 'Pos',
+      categories: [
+        { name: 'Pos', values: ['1', '2', '3'], isPosition: true },
+        { name: 'Pet', values: ['Cat', 'Dog', 'Bird'], isPosition: true },
+        { name: 'Color', values: ['Red', 'Green', 'Blue'] },
+      ],
+    });
+    expect(codes(p)).toContain('MULTIPLE_POSITION_CATEGORIES');
+  });
+
+  it('rejects position category values not starting at 1 (POSITION_VALUES)', () => {
+    const p = puzzle({
+      positionCategory: 'Pos',
+      categories: [
+        { name: 'Pos', values: ['2', '3', '4'], isPosition: true },
+        { name: 'Pet', values: ['Cat', 'Dog', 'Bird'] },
+        { name: 'Color', values: ['Red', 'Green', 'Blue'] },
+      ],
+    });
+    expect(codes(p)).toContain('POSITION_VALUES');
+  });
+
+  it('rejects position category values out of order (POSITION_VALUES)', () => {
+    const p = puzzle({
+      positionCategory: 'Pos',
+      categories: [
+        { name: 'Pos', values: ['1', '3', '2'], isPosition: true },
+        { name: 'Pet', values: ['Cat', 'Dog', 'Bird'] },
+        { name: 'Color', values: ['Red', 'Green', 'Blue'] },
+      ],
+    });
+    expect(codes(p)).toContain('POSITION_VALUES');
+  });
+
+  it('rejects an overlong title (TITLE_TOO_LONG)', () => {
+    expect(codes(puzzle({ title: 'x'.repeat(101) }))).toContain('TITLE_TOO_LONG');
+  });
+
+  it('accepts a title of exactly 100 characters', () => {
+    expect(codes(puzzle({ title: 'x'.repeat(100) }))).not.toContain('TITLE_TOO_LONG');
+  });
+
+  it('rejects an overlong description (DESCRIPTION_TOO_LONG)', () => {
+    expect(codes(puzzle({ description: 'x'.repeat(501) }))).toContain('DESCRIPTION_TOO_LONG');
+  });
+
+  it('accepts a description of exactly 500 characters', () => {
+    expect(codes(puzzle({ description: 'x'.repeat(500) }))).not.toContain('DESCRIPTION_TOO_LONG');
+  });
+
+  it('rejects too many categories (CATEGORY_COUNT)', () => {
+    const makeN = (prefix: string) =>
+      Array.from({ length: 3 }, (_, i) => `${prefix}${i + 1}`);
+    const p = puzzle({
+      positionCategory: 'Pos',
+      categories: [
+        { name: 'Pos', values: ['1', '2', '3'], isPosition: true },
+        { name: 'A', values: makeN('a') },
+        { name: 'B', values: makeN('b') },
+        { name: 'C', values: makeN('c') },
+        { name: 'D', values: makeN('d') },
+        { name: 'E', values: makeN('e') },
+        { name: 'F', values: makeN('f') }, // 7th → over limit
+      ],
+    });
+    expect(codes(p)).toContain('CATEGORY_COUNT');
+  });
+
+  it('rejects an empty value label (EMPTY_VALUE)', () => {
+    const p = puzzle({
+      categories: [
+        { name: 'Pos', values: ['1', '2', '3'], isPosition: true },
+        { name: 'Pet', values: ['Cat', '', 'Bird'] }, // empty string
+        { name: 'Color', values: ['Red', 'Green', 'Blue'] },
+      ],
+    });
+    expect(codes(p)).toContain('EMPTY_VALUE');
+  });
 });

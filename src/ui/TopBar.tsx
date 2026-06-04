@@ -38,6 +38,12 @@ export default function TopBar() {
       setImportError('Invalid puzzle file: missing required fields (categories, positionCategory, clues).');
       return;
     }
+    if ((parsed as Record<string, unknown>).version !== 1) {
+      setImportError(
+        `Unsupported puzzle version (found: ${(parsed as Record<string, unknown>).version ?? 'none'}). Only version 1 is supported.`,
+      );
+      return;
+    }
     const result = validatePuzzle(parsed as Puzzle);
     if (!result.ok) {
       setImportError(`Puzzle is invalid: ${result.errors[0].message}`);

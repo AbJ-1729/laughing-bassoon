@@ -74,14 +74,12 @@ export default function NLClueEditor() {
       {error && (
         <div className="space-y-1">
           <p className="text-xs text-rose-600">{error}</p>
-          {(error.includes('unavailable') || error.includes('timed out')) && (
-            <button
-              onClick={() => setMode('structured')}
-              className="text-xs text-sky-600 underline"
-            >
-              Switch to structured input
-            </button>
-          )}
+          <button
+            onClick={() => setMode('structured')}
+            className="text-xs text-sky-600 underline"
+          >
+            Switch to structured input
+          </button>
         </div>
       )}
 

@@ -112,16 +112,20 @@ export default function SetupPane() {
           <h2 className="text-sm font-semibold">Add clue</h2>
           <div className="flex overflow-hidden rounded border border-slate-300 text-xs" role="tablist">
             <button
+              id="tab-structured"
               role="tab"
               aria-selected={mode === 'structured'}
+              aria-controls="panel-clue"
               onClick={() => setMode('structured')}
               className={`px-2 py-0.5 ${mode === 'structured' ? 'bg-slate-800 text-white' : ''}`}
             >
               Structured
             </button>
             <button
+              id="tab-nl"
               role="tab"
               aria-selected={mode === 'nl'}
+              aria-controls="panel-clue"
               onClick={() => setMode('nl')}
               className={`px-2 py-0.5 ${mode === 'nl' ? 'bg-slate-800 text-white' : ''}`}
             >
@@ -129,7 +133,13 @@ export default function SetupPane() {
             </button>
           </div>
         </div>
-        {mode === 'structured' ? <ClueEditor /> : <NLClueEditor />}
+        <div
+          id="panel-clue"
+          role="tabpanel"
+          aria-labelledby={mode === 'structured' ? 'tab-structured' : 'tab-nl'}
+        >
+          {mode === 'structured' ? <ClueEditor /> : <NLClueEditor />}
+        </div>
       </section>
 
       <section>

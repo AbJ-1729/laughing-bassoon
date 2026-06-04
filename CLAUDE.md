@@ -193,7 +193,7 @@ Key ones to know:
   baseline; no CI gate enforcing the 80% threshold yet.
 
 ### Already fixed (this session)
-- H1: JSON import validated before loading (TopBar.tsx)
+- H1: JSON import validated before loading; version===1 checked (TopBar.tsx)
 - H2: setPositionCategory uses target's n, resizes all categories (store.ts)
 - S2: Solve concurrency guard via _solveSeq (store.ts)
 - S5: removeCategory/removeValue confirm before pruning clues (store.ts)
@@ -201,7 +201,18 @@ Key ones to know:
 - S7/S8: scope="col"/"row" on headers; dropped role=grid/gridcell (GridPane.tsx)
 - PNG export: canvas.toBlob properly awaited + errors surfaced (export.ts)
 - S13: /api/* JSON 404; SPA fallback scoped to non-/api (server/index.js)
-- S11: LLM timeout shows "Switch to structured input" button (NLClueEditor.tsx)
+- S11/M-G: "Switch to structured input" shown on any NL error (NLClueEditor.tsx)
+- H-A: renameValue blocks duplicate names within the same category (store.ts)
+- H-B: addValue capped at n=8; blocks adding to position category (store.ts)
+- H-C: ClueEditor resets local state when edit mode is cancelled (ClueEditor.tsx)
+- H-D: LLM clue type validated against VALID_CLUE_TYPES before registry call (nl-client.ts)
+- M-B: addCategory capped at 6 categories (store.ts)
+- M-C: removeCategory blocked when total would drop below 3 (store.ts)
+- M-E: isPosition flag cross-validated against positionCategory in validatePuzzle (validation.ts)
+- M-F: CellPicker auto-corrects when referenced category/value is renamed or removed (ClueEditor.tsx)
+- M-H: mode toggle now has role=tabpanel + aria-controls/aria-labelledby (SetupPane.tsx)
+- M-J: Empty/whitespace-only category names rejected by validatePuzzle (validation.ts)
+- dotenv: server reads .env automatically; .env.example committed
 
 ---
 

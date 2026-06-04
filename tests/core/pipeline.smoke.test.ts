@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Puzzle } from '@/core/types';
 import { solvePuzzle } from '@/core/pipeline';
+import { clueTypes, getClueHandler } from '@/core/clues/registry';
 
 /** A tiny 3×3 puzzle: Position × Pet × Color. */
 function basePuzzle(clues: Puzzle['clues']): Puzzle {
@@ -15,6 +16,19 @@ function basePuzzle(clues: Puzzle['clues']): Puzzle {
     clues,
   };
 }
+
+describe('registry smoke', () => {
+  it('clueTypes() returns all 9 supported types', () => {
+    const types = clueTypes();
+    expect(types).toHaveLength(9);
+    expect(types).toContain('C1');
+    expect(types).toContain('C9');
+  });
+
+  it('getClueHandler throws on an unknown clue type', () => {
+    expect(() => getClueHandler('C99' as never)).toThrow('Unsupported clue type: C99');
+  });
+});
 
 describe('pipeline smoke', () => {
   it('finds a unique solution for a fully-constrained puzzle', () => {

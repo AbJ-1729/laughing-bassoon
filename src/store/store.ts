@@ -93,6 +93,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addCategory: () =>
     set((s) => {
+      if (s.puzzle.categories.length >= 6) return s; // MAX_CATEGORIES per §5.1
       const n = positionCount(s.puzzle);
       const name = uniqueName('Category', s.puzzle.categories.map((c) => c.name));
       const values = Array.from({ length: n }, (_, i) => `${name.replace(/\s/g, '')}${i + 1}`);
@@ -104,6 +105,7 @@ export const useStore = create<AppState>()((set, get) => ({
   removeCategory: (name) => {
     const s = get();
     if (name === s.puzzle.positionCategory) return;
+    if (s.puzzle.categories.length <= 3) return; // must keep ≥3 categories (§5.1)
     const affected = s.puzzle.clues.filter((c) => clueReferencesCategory(c, name));
     if (
       affected.length > 0 &&
@@ -172,10 +174,13 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addValue: (category, value) =>
     set((s) => {
+      // Position category values are managed automatically — never add manually.
+      if (category === s.puzzle.positionCategory) return s;
+      const cat = s.puzzle.categories.find((c) => c.name === category);
+      // Block if value is empty, already exists, or would push n above 8.
+      if (!cat || !value.trim() || cat.values.includes(value) || cat.values.length >= 8) return s;
       const categories = s.puzzle.categories.map((c) =>
-        c.name === category && value && !c.values.includes(value)
-          ? { ...c, values: [...c.values, value] }
-          : c,
+        c.name === category ? { ...c, values: [...c.values, value] } : c,
       );
       return withClearedSolve({ puzzle: { ...s.puzzle, categories } });
     }),
@@ -200,7 +205,10 @@ export const useStore = create<AppState>()((set, get) => ({
 
   renameValue: (category, oldVal, newVal) =>
     set((s) => {
-      if (!newVal) return s;
+      if (!newVal || newVal === oldVal) return s;
+      const cat = s.puzzle.categories.find((c) => c.name === category);
+      // Block rename if the new name already exists in this category.
+      if (cat?.values.includes(newVal)) return s;
       const categories = s.puzzle.categories.map((c) =>
         c.name === category
           ? { ...c, values: c.values.map((v) => (v === oldVal ? newVal : v)) }

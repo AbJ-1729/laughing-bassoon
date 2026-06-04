@@ -11,6 +11,7 @@ export type ParseResult =
   | { ok: false; error: string };
 
 const TIMEOUT_MS = 5_000;
+const VALID_CLUE_TYPES = new Set<string>(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']);
 
 export async function parseNaturalLanguage(
   text: string,
@@ -37,6 +38,10 @@ export async function parseNaturalLanguage(
     }
     const data = await res.json();
     if (data.error || !data.clue) {
+      return { ok: false, error: "Couldn't parse this — try rephrasing or use structured input." };
+    }
+    // Guard against unknown clue types before they reach getClueHandler().
+    if (typeof data.clue.type !== 'string' || !VALID_CLUE_TYPES.has(data.clue.type)) {
       return { ok: false, error: "Couldn't parse this — try rephrasing or use structured input." };
     }
     return { ok: true, clue: data.clue as Omit<Clue, 'id'>, naturalLanguage: text };

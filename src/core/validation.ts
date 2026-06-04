@@ -51,9 +51,15 @@ export function validatePuzzle(puzzle: Puzzle): ValidationResult {
     });
   }
 
-  // --- Unique category names ---
+  // --- Unique, non-empty category names ---
   const seenCatNames = new Set<string>();
   for (const c of puzzle.categories) {
+    if (!c.name || !c.name.trim()) {
+      errors.push({
+        code: 'EMPTY_CATEGORY_NAME',
+        message: 'A category has an empty or whitespace-only name.',
+      });
+    }
     if (seenCatNames.has(c.name)) {
       errors.push({
         code: 'DUPLICATE_CATEGORY',
@@ -96,6 +102,16 @@ export function validatePuzzle(puzzle: Puzzle): ValidationResult {
       code: 'MULTIPLE_POSITION_CATEGORIES',
       message: `Exactly one category may be the position category (found ${flaggedPositionCats.length}).`,
     });
+  }
+
+  // Cross-validate: any category flagged isPosition:true must be the declared positionCategory.
+  for (const c of puzzle.categories) {
+    if (c.isPosition && c.name !== puzzle.positionCategory) {
+      errors.push({
+        code: 'POSITION_FLAG_MISMATCH',
+        message: `Category "${c.name}" has isPosition: true but is not the declared positionCategory "${puzzle.positionCategory}".`,
+      });
+    }
   }
 
   const posCat = positionCats[0];

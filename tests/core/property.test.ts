@@ -136,9 +136,19 @@ describe('property-based §8.4', () => {
           }
           break;
         }
-        case 'multiple':
+        case 'multiple': {
           nMultiple++;
+          // §5.7: the two assignments must differ in at least one cell, and
+          // every differing cell must be listed in `ambiguous`.
+          expect(result.ambiguous.length).toBeGreaterThan(0);
+          const anyDiff = result.ambiguous.some(
+            (cell) =>
+              result.assignmentA[cell.category]?.[cell.value] !==
+              result.assignmentB[cell.category]?.[cell.value],
+          );
+          expect(anyDiff).toBe(true);
           break;
+        }
         case 'invalid':
           nInvalid++;
           break;

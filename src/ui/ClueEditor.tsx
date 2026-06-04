@@ -33,8 +33,17 @@ export default function ClueEditor() {
   const [k, setK] = useState(1);
 
   // When entering edit mode, load the selected clue into the form (§6.1 edit).
+  // When edit mode is cancelled (editingClueId → null, e.g. due to a rename
+  // mid-edit), reset to defaults so stale cell references don't linger.
   const editingClue = puzzle.clues.find((c) => c.id === editingClueId);
   useEffect(() => {
+    if (editingClueId === null) {
+      setType('C1');
+      setX(firstCell);
+      setY(secondCell);
+      setK(1);
+      return;
+    }
     if (!editingClue) return;
     setType(editingClue.type);
     setX(editingClue.x);
@@ -43,7 +52,7 @@ export default function ClueEditor() {
     } else {
       setY((editingClue as BinaryClue).y);
     }
-    // Only re-run when the edited clue changes.
+    // Only re-run when the edited clue id changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingClueId]);
 
@@ -127,7 +136,28 @@ export function CellPicker({
   onChange: (cell: Cell) => void;
 }) {
   const puzzle = useStore((s) => s.puzzle);
-  const cat = puzzle.categories.find((c) => c.name === cell.category) ?? puzzle.categories[0];
+  const catMatch = puzzle.categories.find((c) => c.name === cell.category);
+  const cat = catMatch ?? puzzle.categories[0];
+
+  // If the referenced category was renamed or removed, snap to the first category.
+  const categoryExists = catMatch !== undefined;
+  useEffect(() => {
+    if (!categoryExists && puzzle.categories[0]) {
+      const first = puzzle.categories[0];
+      onChange({ category: first.name, value: first.values[0] ?? '' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryExists]);
+
+  // If the referenced value was removed from the category, snap to the first value.
+  const valueExists = cat?.values.includes(cell.value) ?? false;
+  useEffect(() => {
+    if (categoryExists && !valueExists && cat && cat.values.length > 0) {
+      onChange({ category: cell.category, value: cat.values[0] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueExists, cell.category]);
+
   return (
     <div className="flex items-center gap-1 text-sm">
       <span className="w-4 text-slate-500">{label}</span>

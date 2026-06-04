@@ -140,6 +140,30 @@ describe('inference engine §5.6 — each rule fires', () => {
     expect(labels).toContain('R5');
   });
 
+  it('R4 fires from a C2 (inequality) clue — not just C1', () => {
+    // L-14: the existing R4 test only used C1. C2 also carries inferenceRule:'R4'.
+    // Colors are pinned; C2 clues narrow Pet positions via inequality (arc-consistency).
+    const DRINK3: Category = { name: 'Drink', values: ['Tea', 'Milk', 'Cola'] };
+    const labels = ruleLabelsAndInvariants(
+      puzzle(
+        [pos(3), PET3, COLOR3, DRINK3],
+        [
+          { id: 1, type: 'C3', x: C('Color', 'Red'), k: 1 },
+          { id: 2, type: 'C3', x: C('Color', 'Green'), k: 2 },
+          { id: 3, type: 'C3', x: C('Color', 'Blue'), k: 3 },
+          // C2 inequality: forces Pet to avoid the pinned color's position.
+          { id: 4, type: 'C2', x: C('Pet', 'Cat'), y: C('Color', 'Red') },
+          { id: 5, type: 'C2', x: C('Pet', 'Dog'), y: C('Color', 'Green') },
+          // Additional constraints to make the puzzle uniquely solvable.
+          { id: 6, type: 'C1', x: C('Pet', 'Bird'), y: C('Color', 'Blue') },
+          { id: 7, type: 'C1', x: C('Drink', 'Tea'), y: C('Color', 'Red') },
+          { id: 8, type: 'C1', x: C('Drink', 'Milk'), y: C('Color', 'Green') },
+        ],
+      ),
+    );
+    expect(labels).toContain('R4');
+  });
+
   it('R6 — oracle-guided case analysis (branching)', () => {
     // Local propagation stalls on this uniquely-solvable n=3 puzzle (no clue
     // pins anything directly), so the engine must branch via R6.
@@ -157,6 +181,51 @@ describe('inference engine §5.6 — each rule fires', () => {
       ),
     );
     expect(labels).toContain('R6');
+  });
+});
+
+describe('inference engine §5.6 — zero-clue puzzle (L-15)', () => {
+  it('explain() converges on a puzzle with no clues (R6 and R2 only)', () => {
+    // Without any clues R1/R3/R4/R5 never fire; R6 (oracle-guided branching)
+    // drives the proof, interleaved with R2 (bijection) after each placement.
+    const DRINK3: Category = { name: 'Drink', values: ['Tea', 'Milk', 'Cola'] };
+    const noCluesPuzzle = puzzle([pos(3), PET3, DRINK3], []);
+
+    // Build a valid oracle by solving a fully-pinned sibling.
+    const pinned = puzzle(
+      [pos(3), PET3, DRINK3],
+      [
+        { id: 1, type: 'C3', x: C('Pet', 'Cat'), k: 1 },
+        { id: 2, type: 'C3', x: C('Pet', 'Dog'), k: 2 },
+        { id: 3, type: 'C3', x: C('Drink', 'Tea'), k: 1 },
+        { id: 4, type: 'C3', x: C('Drink', 'Milk'), k: 2 },
+      ],
+    );
+    const r = solvePuzzle(pinned);
+    expect(r.status).toBe('unique');
+    if (r.status !== 'unique') return;
+
+    const { steps, snapshots } = explain(noCluesPuzzle, r.assignment);
+
+    // Must still terminate with a complete proof.
+    expect(steps.length).toBeGreaterThan(0);
+    expect(snapshots.length).toBe(steps.length + 1);
+
+    // Without clues only R2 (bijection) and R6 (branching) can fire.
+    for (const step of steps) {
+      expect(['R2', 'R6']).toContain(step.rule);
+    }
+
+    // Final snapshot must match the oracle exactly.
+    const finalSnap = snapshots[snapshots.length - 1];
+    for (const cat of noCluesPuzzle.categories) {
+      if (cat.name === noCluesPuzzle.positionCategory) continue;
+      for (const value of cat.values) {
+        expect(finalSnap[cellKey(C(cat.name, value))]).toEqual([
+          r.assignment[cat.name][value],
+        ]);
+      }
+    }
   });
 });
 

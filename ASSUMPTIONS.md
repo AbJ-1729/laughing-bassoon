@@ -26,10 +26,10 @@ spec. They are recorded here for transparency.
    specifies the *Anthropic Claude API (Sonnet)*. Per the owner's budget
    constraint, the proxy instead calls **OpenRouter** (an OpenAI-compatible
    gateway) at `https://openrouter.ai/api/v1/chat/completions`, reading
-   `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (default
-   `anthropic/claude-3.5-haiku` — a budget-friendly model adequate for
-   one-sentence→JSON parsing; set `anthropic/claude-3.5-sonnet` for the
-   spec-intended Sonnet accuracy). The clue-parsing contract is unchanged: the
+   `OPENROUTER_API_KEY` and `OPENROUTER_MODEL`. The default is the
+   spec-mandated Sonnet (`anthropic/claude-sonnet-4.6`, ~$0.003 per parse —
+   well within a $10 budget); override with a cheaper model such as
+   `anthropic/claude-3.5-haiku` if desired. The clue-parsing contract is unchanged: the
    model must return one of the 9 clue types or `{error}`, the server now
    *enforces* that the returned `type` is one of C1–C9, the user still confirms
    every parse, and the app remains fully usable offline.

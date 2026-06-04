@@ -5,6 +5,7 @@
  */
 import { useStore } from '../store/store';
 import { exportDeductionMarkdown } from './export';
+import { Button } from '@/components/ui/button';
 
 export default function DeductionPane() {
   const report = useStore((s) => s.report);
@@ -64,12 +65,13 @@ export default function DeductionPane() {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">Deduction chain</h2>
-        <button
-          className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => exportDeductionMarkdown(puzzle, report.explanation)}
         >
           Export .md
-        </button>
+        </Button>
       </div>
       <ol className="space-y-1">
         {steps.map((step) => {

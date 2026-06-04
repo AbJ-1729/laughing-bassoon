@@ -95,7 +95,7 @@ works fully; the NL button is simply disabled.
 ```bash
 # .env  (gitignored — never commit this file)
 OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=anthropic/claude-3.5-haiku   # default; use claude-3.5-sonnet for higher accuracy
+OPENROUTER_MODEL=anthropic/claude-sonnet-4.6   # default (per SPECS §4); use anthropic/claude-3.5-haiku to cut cost
 ```
 
 2. Start the proxy — it picks up `.env` automatically:

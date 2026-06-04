@@ -13,7 +13,7 @@ export default function App() {
       <TopBar />
       <main className="flex min-h-0 flex-1">
         <aside
-          className="w-[300px] shrink-0 overflow-y-auto border-r border-slate-200 bg-white p-3"
+          className="w-[300px] shrink-0 overflow-y-auto border-r bg-card p-3"
           aria-label="Puzzle setup"
         >
           <SetupPane />
@@ -22,7 +22,7 @@ export default function App() {
           <GridPane />
         </section>
         <aside
-          className="w-[400px] shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-3"
+          className="w-[400px] shrink-0 overflow-y-auto border-l bg-card p-3"
           aria-label="Deduction chain"
         >
           <DeductionPane />

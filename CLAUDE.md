@@ -176,21 +176,23 @@ Key ones to know:
 | B7 | ≤30 deduction steps for all 5 canned puzzles | Zebra ~60 steps; ≤30 asserted only for easy/medium |
 | §8 | | `logic-solver` npm package used instead of `minisat.js` (same MiniSat core) |
 | §9 | | R1 rule covers only C3/C4; C5/C6/C8/C9 forced consequences labelled R5 |
-| §4 | Tailwind CSS + **shadcn/ui** | Hand-rolled Tailwind only (shadcn/ui not yet retrofitted) |
+| §4 | shadcn/ui (current CLI targets Tailwind v4) | shadcn/ui retrofitted, configured for the project's Tailwind v3 (HSL tokens, classic component source) |
 
 ---
 
 ## Open items (from todo.md + spec audit)
 
-### Remaining (not yet fixed)
-- **shadcn/ui retrofit** (T1, high spec gap): `npx shadcn@latest init`, add
-  Button/Select/Input/Textarea/Tabs/Slider/Card, refactor all 6 UI files.
-  Large task — estimate 2-3× the work of everything else combined.
-- **E2E verification** (S10): two Playwright tests (`clue editing`,
-  `description field`) committed but not confirmed green on a running dev server.
-  Run `npx playwright install chromium && npm run e2e` to verify.
+### Done
+- **shadcn/ui retrofit** (§4): primitives in `src/components/ui/`
+  (Button/Input/Textarea/Label/Select/Tabs/Slider/Card); all panes refactored.
+  Configured for Tailwind v3 (HSL tokens). 7/7 Playwright e2e + 126 unit pass.
+- **E2E verification**: full Playwright suite green on a fresh dev server.
+
+### Remaining (optional)
 - **≥80% test coverage** (§12): `npm run test:coverage` to check current
   baseline; no CI gate enforcing the 80% threshold yet.
+- Low-priority polish items in `todo.md` (MUS C1 explanation, NL-label
+  preservation on edit, value trimming, zebra verbosity).
 
 ### Already fixed (this session)
 - H1: JSON import validated before loading; version===1 checked (TopBar.tsx)

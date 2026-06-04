@@ -1,17 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// The dropdowns are shadcn/ui (Radix) Selects: open the trigger, then click the
+// option (role="option" in a portal) — not a native <select>.
 async function loadExample(page: Page, name: RegExp) {
-  await page.getByLabel('Load example').selectOption({ label: (await optionLabel(page, name)) });
-}
-
-async function optionLabel(page: Page, name: RegExp): Promise<string> {
-  const options = await page.getByLabel('Load example').locator('option').allTextContents();
-  const match = options.find((o) => name.test(o));
-  if (!match) throw new Error(`No example option matching ${name}`);
-  return match;
+  await page.getByLabel('Load example').click();
+  await page.getByRole('option', { name }).click();
 }
 
 test.beforeEach(async ({ page }) => {
+  // Destructive edits (e.g. removing a value that clues reference) now prompt a
+  // confirm() before pruning clues; auto-accept so flows proceed.
+  page.on('dialog', (d) => d.accept().catch(() => {}));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Logic-Grid Puzzle Solver' })).toBeVisible();
 });
@@ -54,12 +53,23 @@ test('ill-formed puzzle is rejected with a clear error', async ({ page }) => {
   await expect(page.getByText(/not well-formed/i).first()).toBeVisible({ timeout: 15_000 });
 });
 
+test('New starts a blank custom puzzle', async ({ page }) => {
+  await loadExample(page, /Coffee Shop/);
+  await expect(page.getByText('Ann is at position 1.')).toBeVisible();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  // Blank puzzle has no clues and a default title.
+  await expect(page.getByText('Ann is at position 1.')).toHaveCount(0);
+  await expect(page.getByText(/^Clues \(0\)/)).toBeVisible();
+  await expect(page.getByLabel('Puzzle title')).toHaveValue('Untitled puzzle');
+});
+
 test('clue editing: load a clue, change it, save (§6.1)', async ({ page }) => {
   await loadExample(page, /Coffee Shop/);
   await expect(page.getByText('Ann is at position 1.')).toBeVisible();
   await page.getByRole('button', { name: 'Edit clue 1' }).click();
   // The structured editor loads the clue; change the position to 2 and save.
-  await page.getByLabel('Position', { exact: true }).selectOption('2');
+  await page.getByLabel('Position', { exact: true }).click();
+  await page.getByRole('option', { name: '2', exact: true }).click();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Ann is at position 2.')).toBeVisible();
   await expect(page.getByText('Ann is at position 1.')).toHaveCount(0);

@@ -11,6 +11,8 @@ import type { CellMark } from './grid-model';
 import type { PositionSnapshot } from '../core/inference/types';
 import type { Puzzle } from '../core/types';
 import { exportGridPng } from './export';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 
 const GLYPH: Record<CellMark, string> = { true: '✓', false: '✗', unknown: '?' };
 const MARK_CLASS: Record<CellMark, string> = {
@@ -50,8 +52,9 @@ export default function GridPane() {
       )}
 
       <div className="flex gap-2">
-        <button
-          className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={async () => {
             if (!gridRef.current) return;
             try {
@@ -62,7 +65,7 @@ export default function GridPane() {
           }}
         >
           Export grid PNG
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -240,17 +243,17 @@ function PlaybackBar() {
       <PlayBtn label="Previous step" disabled={disabled} onClick={() => setStepIndex(stepIndex - 1)}>◀</PlayBtn>
       <PlayBtn label="Next step" disabled={disabled} onClick={() => setStepIndex(stepIndex + 1)}>▶</PlayBtn>
       <PlayBtn label="Last step" disabled={disabled} onClick={() => setStepIndex(total)}>⏭</PlayBtn>
-      <input
-        type="range"
+      <Slider
         min={0}
-        max={total}
-        value={stepIndex}
+        max={Math.max(total, 1)}
+        step={1}
+        value={[stepIndex]}
         disabled={disabled}
         aria-label="Deduction step"
-        onChange={(e) => setStepIndex(Number(e.target.value))}
+        onValueChange={([v]) => setStepIndex(v)}
         className="flex-1"
       />
-      <span className="w-16 text-right text-xs text-slate-500">
+      <span className="w-16 text-right text-xs text-muted-foreground">
         {stepIndex} / {total}
       </span>
     </div>
@@ -269,13 +272,8 @@ function PlayBtn({
   onClick: () => void;
 }) {
   return (
-    <button
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-40 hover:bg-slate-50"
-    >
+    <Button aria-label={label} variant="outline" size="icon" disabled={disabled} onClick={onClick}>
       {children}
-    </button>
+    </Button>
   );
 }

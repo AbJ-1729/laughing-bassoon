@@ -1,13 +1,18 @@
 /**
  * Left pane (SPECS §6.1): puzzle setup — category/value editor, position-category
  * selector, clue entry (structured or natural-language per the mode toggle), and
- * the reorderable clue list.
+ * the reorderable clue list. Built on shadcn/ui primitives.
  */
 import { useState } from 'react';
 import { useStore } from '../store/store';
 import { getClueHandler } from '../core/clues/registry';
 import ClueEditor from './ClueEditor';
 import NLClueEditor from './NLClueEditor';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { EntryMode } from '../store/store';
 
 export default function SetupPane() {
   const puzzle = useStore((s) => s.puzzle);
@@ -37,21 +42,21 @@ export default function SetupPane() {
 
   return (
     <div className="space-y-4">
-      <section>
-        <input
+      <section className="space-y-1">
+        <Input
           aria-label="Puzzle title"
           value={puzzle.title ?? ''}
           onChange={(e) => setPuzzleMeta({ title: e.target.value })}
-          className="w-full rounded border border-slate-300 p-1 text-sm font-semibold"
+          className="font-semibold"
           placeholder="Puzzle title"
         />
-        <textarea
+        <Textarea
           aria-label="Puzzle description"
           value={puzzle.description ?? ''}
           onChange={(e) => setPuzzleMeta({ description: e.target.value })}
           rows={2}
           maxLength={500}
-          className="mt-1 w-full rounded border border-slate-300 p-1 text-xs"
+          className="text-xs"
           placeholder="Description (optional)"
         />
       </section>
@@ -59,22 +64,19 @@ export default function SetupPane() {
       <section>
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Categories</h2>
-          <button
-            onClick={addCategory}
-            className="rounded border border-slate-300 px-2 text-xs hover:bg-slate-50"
-          >
+          <Button variant="outline" size="sm" onClick={addCategory}>
             + Category
-          </button>
+          </Button>
         </div>
         <div className="space-y-2">
           {puzzle.categories.map((cat) => (
-            <div key={cat.name} className="rounded border border-slate-200 p-2">
+            <div key={cat.name} className="rounded-md border p-2">
               <div className="flex items-center gap-1">
-                <input
+                <Input
                   aria-label={`Category name ${cat.name}`}
                   value={cat.name}
                   onChange={(e) => renameCategory(cat.name, e.target.value)}
-                  className="flex-1 rounded border border-slate-200 p-1 text-sm font-medium"
+                  className="h-8 flex-1 font-medium"
                 />
                 <label className="flex items-center gap-1 text-xs" title="Position category">
                   <input
@@ -87,18 +89,20 @@ export default function SetupPane() {
                   pos
                 </label>
                 {cat.name !== puzzle.positionCategory && (
-                  <button
+                  <Button
                     aria-label={`Remove category ${cat.name}`}
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive"
                     onClick={() => removeCategory(cat.name)}
-                    className="rounded px-1 text-rose-500 hover:bg-rose-50"
                   >
                     ✕
-                  </button>
+                  </Button>
                 )}
               </div>
               {cat.name === puzzle.positionCategory ? (
                 <div className="mt-1 text-xs">
-                  <p className="text-slate-400">
+                  <p className="text-muted-foreground">
                     Positions 1–{cat.values.length} — auto-sized to match the other categories.
                   </p>
                   {!attrSizesUniform && (
@@ -125,36 +129,14 @@ export default function SetupPane() {
       <section>
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Add clue</h2>
-          <div className="flex overflow-hidden rounded border border-slate-300 text-xs" role="tablist">
-            <button
-              id="tab-structured"
-              role="tab"
-              aria-selected={mode === 'structured'}
-              aria-controls="panel-clue"
-              onClick={() => setMode('structured')}
-              className={`px-2 py-0.5 ${mode === 'structured' ? 'bg-slate-800 text-white' : ''}`}
-            >
-              Structured
-            </button>
-            <button
-              id="tab-nl"
-              role="tab"
-              aria-selected={mode === 'nl'}
-              aria-controls="panel-clue"
-              onClick={() => setMode('nl')}
-              className={`px-2 py-0.5 ${mode === 'nl' ? 'bg-slate-800 text-white' : ''}`}
-            >
-              Natural language
-            </button>
-          </div>
+          <Tabs value={mode} onValueChange={(v) => setMode(v as EntryMode)}>
+            <TabsList className="h-7">
+              <TabsTrigger value="structured">Structured</TabsTrigger>
+              <TabsTrigger value="nl">Natural language</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-        <div
-          id="panel-clue"
-          role="tabpanel"
-          aria-labelledby={mode === 'structured' ? 'tab-structured' : 'tab-nl'}
-        >
-          {mode === 'structured' ? <ClueEditor /> : <NLClueEditor />}
-        </div>
+        {mode === 'structured' ? <ClueEditor /> : <NLClueEditor />}
       </section>
 
       <section>
@@ -163,49 +145,31 @@ export default function SetupPane() {
           {puzzle.clues.map((clue, i) => (
             <li
               key={clue.id}
-              className={`flex items-start gap-1 rounded border p-1 text-sm ${
-                editingClueId === clue.id ? 'border-amber-400 bg-amber-50' : 'border-slate-200'
+              className={`flex items-start gap-1 rounded-md border p-1 text-sm ${
+                editingClueId === clue.id ? 'border-amber-400 bg-amber-50' : ''
               }`}
             >
-              <span className="w-4 text-xs text-slate-400">{clue.id}</span>
+              <span className="w-4 text-xs text-muted-foreground">{clue.id}</span>
               <span className="flex-1">
                 {getClueHandler(clue.type).describe(clue)}
                 {clue.naturalLanguage && (
-                  <span className="block text-[11px] italic text-slate-400">
+                  <span className="block text-[11px] italic text-muted-foreground">
                     “{clue.naturalLanguage}”
                   </span>
                 )}
               </span>
-              <button
-                aria-label={`Edit clue ${clue.id}`}
-                onClick={() => beginEditClue(clue.id)}
-                className="px-1 hover:bg-slate-100"
-              >
+              <Button aria-label={`Edit clue ${clue.id}`} variant="ghost" size="icon" className="h-6 w-6" onClick={() => beginEditClue(clue.id)}>
                 ✎
-              </button>
-              <button
-                aria-label={`Move clue ${clue.id} up`}
-                disabled={i === 0}
-                onClick={() => moveClue(clue.id, -1)}
-                className="px-1 disabled:opacity-30"
-              >
+              </Button>
+              <Button aria-label={`Move clue ${clue.id} up`} variant="ghost" size="icon" className="h-6 w-6" disabled={i === 0} onClick={() => moveClue(clue.id, -1)}>
                 ↑
-              </button>
-              <button
-                aria-label={`Move clue ${clue.id} down`}
-                disabled={i === puzzle.clues.length - 1}
-                onClick={() => moveClue(clue.id, 1)}
-                className="px-1 disabled:opacity-30"
-              >
+              </Button>
+              <Button aria-label={`Move clue ${clue.id} down`} variant="ghost" size="icon" className="h-6 w-6" disabled={i === puzzle.clues.length - 1} onClick={() => moveClue(clue.id, 1)}>
                 ↓
-              </button>
-              <button
-                aria-label={`Delete clue ${clue.id}`}
-                onClick={() => removeClue(clue.id)}
-                className="px-1 text-rose-500 hover:bg-rose-50"
-              >
+              </Button>
+              <Button aria-label={`Delete clue ${clue.id}`} variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeClue(clue.id)}>
                 ✕
-              </button>
+              </Button>
             </li>
           ))}
         </ol>
@@ -232,19 +196,21 @@ function ValueEditor({
     <div className="mt-2 space-y-1">
       {values.map((v) => (
         <div key={v} className="flex items-center gap-1">
-          <input
+          <Input
             aria-label={`${category} value ${v}`}
             value={v}
             onChange={(e) => onRename(v, e.target.value)}
-            className="flex-1 rounded border border-slate-200 p-0.5 text-xs"
+            className="h-7 flex-1 text-xs"
           />
-          <button
+          <Button
             aria-label={`Remove value ${v}`}
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive"
             onClick={() => onRemove(v)}
-            className="px-1 text-rose-400 hover:bg-rose-50"
           >
             ✕
-          </button>
+          </Button>
         </div>
       ))}
       <form
@@ -257,14 +223,16 @@ function ValueEditor({
         }}
         className="flex gap-1"
       >
-        <input
+        <Input
           aria-label={`New value for ${category}`}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="add value…"
-          className="flex-1 rounded border border-slate-200 p-0.5 text-xs"
+          className="h-7 flex-1 text-xs"
         />
-        <button className="rounded border border-slate-300 px-1 text-xs">+</button>
+        <Button type="submit" variant="outline" size="icon" className="h-7 w-7">
+          +
+        </Button>
       </form>
     </div>
   );

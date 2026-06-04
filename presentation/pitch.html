@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Logic-Grid Puzzle Solver — VC Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F4F2E8;        /* warm paper */
+    --ink:#1A1A15;          /* near-black */
+    --ink-soft:#4A4842;
+    --muted:#6B6860;
+    --accent:#137A4C;       /* the app's "Solved" green */
+    --accent-soft:#137A4C22;
+    --amber:#B6852A;
+    --rose:#A23B36;
+    --line:#1A1A1522;
+    --code-bg:#1A1A15;
+    --code-key:#C792EA;
+    --code-type:#82AAFF;
+    --code-fn:#7FD6A6;
+    --code-str:#E6C07B;
+    --code-dim:#8B8780;
+    --display: "Newsreader", Georgia, serif;
+    --sans: "Hanken Grotesk", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; background:#11110D; color:var(--ink); font-family:var(--sans); }
+
+  /* ---- stage / scaling ---------------------------------------------------- */
+  #stage{
+    position:fixed; inset:0; display:grid; place-items:center; overflow:hidden;
+  }
+  .slide{
+    position:absolute; width:1280px; height:720px;            /* 16:9 base */
+    background:var(--paper); color:var(--ink);
+    display:none; flex-direction:column; justify-content:center;
+    padding:72px 96px; overflow:hidden;
+    box-shadow:0 30px 80px #00000066;
+  }
+  .slide.active{ display:flex; }
+
+  /* subtle paper grain via radial accent */
+  .slide::after{
+    content:""; position:absolute; right:-160px; bottom:-160px;
+    width:420px; height:420px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent-soft), transparent 70%);
+    pointer-events:none;
+  }
+
+  /* ---- typographic primitives -------------------------------------------- */
+  .kicker{ font-family:var(--mono); font-size:18px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--accent); margin-bottom:24px; }
+  h1.display{ font-family:var(--display); font-weight:500; font-size:104px;
+    line-height:1.02; letter-spacing:-.01em; }
+  h2.title{ font-family:var(--display); font-weight:500; font-size:62px;
+    line-height:1.05; letter-spacing:-.01em; }
+  .subtitle{ font-family:var(--display); font-style:italic; font-size:36px;
+    color:var(--ink-soft); margin-top:18px; }
+  .body{ font-size:28px; line-height:1.4; color:var(--ink-soft); }
+  .accent{ color:var(--accent); }
+  .names{ font-family:var(--mono); font-size:18px; color:var(--muted);
+    letter-spacing:.04em; margin-top:48px; }
+
+  /* three-column brief */
+  .cols{ display:grid; grid-template-columns:repeat(3,1fr); gap:40px; margin-top:24px; }
+  .col h3{ font-family:var(--display); font-size:46px; font-weight:500; margin-bottom:10px; }
+  .col p{ font-size:21px; color:var(--muted); line-height:1.35; }
+  .col.lead h3{ color:var(--accent); }
+  .col.lead{ position:relative; }
+  .col.lead::before{ content:""; position:absolute; left:-20px; top:6px; bottom:6px;
+    width:4px; background:var(--accent); border-radius:2px; }
+
+  /* metrics row */
+  .metrics{ display:grid; grid-template-columns:repeat(4,1fr); gap:28px; margin:8px 0 28px; }
+  .metric .num{ font-family:var(--display); font-size:64px; font-weight:500; line-height:1; }
+  .metric .lab{ font-family:var(--mono); font-size:15px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); margin-top:10px; }
+  .pipeline{ font-family:var(--mono); font-size:18px; color:var(--ink-soft);
+    border-top:1px solid var(--line); padding-top:20px; letter-spacing:.02em; }
+
+  /* assumption rows */
+  .rows{ display:flex; flex-direction:column; gap:18px; margin-top:14px; }
+  .row{ display:flex; align-items:baseline; gap:20px; font-size:25px; }
+  .row .tag{ font-family:var(--mono); font-size:15px; color:var(--accent);
+    min-width:54px; letter-spacing:.04em; }
+  .row .txt{ color:var(--ink-soft); }
+  .row .txt em{ color:var(--ink); font-style:italic; }
+
+  /* two-up (reasoning) */
+  .twoup{ display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; margin-top:18px; }
+  .chain{ display:flex; flex-direction:column; gap:14px; }
+  .step{ background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:16px 18px; font-size:19px; color:var(--ink); }
+  .step .pills{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .pill{ font-family:var(--mono); font-size:13px; padding:3px 9px; border-radius:999px; }
+  .pill.clue{ background:#137A4C1a; color:var(--accent); }
+  .pill.step{ background:#6b4ea31a; color:#6B4EA3; }
+  .gridmini{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+  .gridmini i{ aspect-ratio:1; border:1px solid var(--line); border-radius:6px;
+    display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--muted); background:#fff; }
+  .gridmini i.on{ background:#137A4C18; color:var(--accent); font-weight:700; border-color:#137A4C55; }
+
+  /* section break */
+  .slide.section{ background:var(--accent); color:var(--paper); }
+  .slide.section::after{ background:radial-gradient(circle, #ffffff22, transparent 70%); }
+  .slide.section h2.title{ color:var(--paper); font-size:76px; }
+  .slide.section .subtitle{ color:#EAF3EC; font-style:italic; }
+  .slide.section .kicker{ color:#CDE7D6; }
+  .leopard{ display:flex; gap:10px; margin-bottom:28px; }
+  .leopard b{ width:14px; height:14px; border-radius:50%; background:#0E5E3A; display:block; }
+  .leopard b:nth-child(2n){ background:#0a4a2e; transform:translateY(6px); }
+
+  /* four seams 2x2 */
+  .seams{ display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:18px; }
+  .seam{ border:1px solid var(--line); border-radius:14px; padding:24px 26px; background:#fff; }
+  .seam .n{ font-family:var(--mono); font-size:14px; color:var(--accent); letter-spacing:.1em; }
+  .seam .t{ font-family:var(--display); font-size:30px; margin-top:8px; line-height:1.15; }
+
+  /* code card */
+  .code{ background:var(--code-bg); color:#E8E6DF; border-radius:14px;
+    padding:30px 34px; font-family:var(--mono); font-size:21px; line-height:1.55;
+    box-shadow:0 18px 50px #00000055; }
+  .code .k{ color:var(--code-key); } .code .ty{ color:var(--code-type); }
+  .code .fn{ color:var(--code-fn); } .code .s{ color:var(--code-str); }
+  .code .c{ color:var(--code-dim); font-style:italic; }
+  .payoff{ font-size:23px; color:var(--ink); margin-top:24px; }
+  .payoff b{ color:var(--accent); }
+  .fileref{ font-family:var(--mono); font-size:15px; color:var(--muted); margin-top:10px; }
+
+  /* closing */
+  .stand{ display:flex; gap:40px; margin-top:8px; }
+  .stand div{ font-family:var(--display); font-size:40px; }
+  .stand div b{ color:var(--accent); font-weight:500; }
+  .ask{ font-family:var(--display); font-style:italic; font-size:54px;
+    margin-top:54px; color:var(--ink); }
+  .echo{ font-family:var(--mono); font-size:15px; color:var(--muted); margin-top:18px; letter-spacing:.04em; }
+
+  /* ---- chrome: counter, hints, notes ------------------------------------- */
+  #counter{ position:fixed; right:18px; bottom:14px; z-index:20;
+    font-family:var(--mono); font-size:13px; color:#EAE7DC99; letter-spacing:.08em; }
+  #hint{ position:fixed; left:18px; bottom:14px; z-index:20;
+    font-family:var(--mono); font-size:12px; color:#EAE7DC66; letter-spacing:.04em; }
+  #badge{ position:fixed; left:18px; top:14px; z-index:20; font-family:var(--mono);
+    font-size:12px; letter-spacing:.06em; color:#EAE7DC99; }
+  #badge .who{ color:var(--accent); }
+
+  #notes{ position:fixed; left:0; right:0; bottom:0; z-index:30;
+    max-height:42vh; overflow:auto; background:#0c0c08f2; color:#E8E6DF;
+    border-top:2px solid var(--accent); padding:18px 26px 22px; display:none;
+    font-size:15.5px; line-height:1.5; }
+  #notes.show{ display:block; }
+  #notes h4{ font-family:var(--mono); font-size:12px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+  #notes .meta{ color:#A8A49A; font-family:var(--mono); font-size:12px; margin-bottom:10px; }
+  #notes p{ margin-bottom:8px; max-width:1100px; }
+  #notes .q{ color:#E6C07B; }
+
+  /* ---- print: one slide per page, notes below ----------------------------- */
+  @media print{
+    @page{ size:1280px 720px; margin:0; }
+    html,body{ background:#fff; }
+    #stage{ position:static; display:block; }
+    #counter,#hint,#badge{ display:none; }
+    .slide{ position:relative; display:flex !important; page-break-after:always;
+      box-shadow:none; width:1280px; height:720px; }
+    #notes{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1 ─ Cover ------------------------------------------------------------ -->
+  <section class="slide active" data-who="Abhijai · ~20s" data-notes="cover">
+    <div class="kicker">VC Build Review · 2026</div>
+    <h1 class="display">Logic-Grid<br>Puzzle Solver</h1>
+    <div class="subtitle">Define a puzzle. Solve it. Read the reasoning.</div>
+    <div class="names">Abhijai &nbsp;·&nbsp; Bhavay</div>
+  </section>
+
+  <!-- 2 ─ The Brief -------------------------------------------------------- -->
+  <section class="slide" data-who="Abhijai · ~35s" data-notes="brief">
+    <div class="kicker">The Brief</div>
+    <div class="cols">
+      <div class="col"><h3>Define</h3><p>Categories, values, and clues — your schema.</p></div>
+      <div class="col"><h3>Solve</h3><p>A real SAT solver finds <em>and verifies</em> the answer.</p></div>
+      <div class="col lead"><h3>Explain</h3><p>A step-by-step, human-readable proof. The novelty.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 ─ Built to the Spec ------------------------------------------------ -->
+  <section class="slide" data-who="Abhijai · ~45s" data-notes="spec">
+    <div class="kicker">Built to the Spec</div>
+    <div class="metrics">
+      <div class="metric"><div class="num">9/9</div><div class="lab">Clue types</div></div>
+      <div class="metric"><div class="num">3</div><div class="lab">Outcomes</div></div>
+      <div class="metric"><div class="num">126</div><div class="lab">Tests passing</div></div>
+      <div class="metric"><div class="num">91%</div><div class="lab">Core coverage</div></div>
+    </div>
+    <div class="pipeline">validate → encode → solve → classify → explain &nbsp;·&nbsp; client-side · Web Worker · 10s timeout</div>
+  </section>
+
+  <!-- 4 ─ Where the Spec Was Silent --------------------------------------- -->
+  <section class="slide" data-who="Abhijai → Bhavay · ~45s" data-notes="assumptions">
+    <div class="kicker">Where the Spec Was Silent</div>
+    <div class="rows">
+      <div class="row"><span class="tag">≠</span><span class="txt">means different <em>cells</em>, not different categories</span></div>
+      <div class="row"><span class="tag">SAT</span><span class="txt"><em>logic-solver</em> — same MiniSat core</span></div>
+      <div class="row"><span class="tag">LLM</span><span class="txt">OpenRouter proxy, to respect <em>budget</em></span></div>
+      <div class="row"><span class="tag">Proof</span><span class="txt">Zebra ≈ 60 steps — longer than 30, <em>every step cited</em></span></div>
+    </div>
+  </section>
+
+  <!-- 5 ─ Reasoning, Not Just Answers ------------------------------------- -->
+  <section class="slide" data-who="Bhavay · ~60s" data-notes="reasoning">
+    <div class="kicker">The Novelty</div>
+    <h2 class="title">SAT finds it.<br>The engine <span class="accent">explains</span> it.</h2>
+    <div class="twoup">
+      <div class="gridmini" aria-hidden="true">
+        <i class="on">✓</i><i>·</i><i>·</i><i>·</i><i>·</i>
+        <i>·</i><i>·</i><i class="on">✓</i><i>·</i><i>·</i>
+        <i>·</i><i>·</i><i>·</i><i>·</i><i class="on">✓</i>
+      </div>
+      <div class="chain">
+        <div class="step">From clue 9, the Norwegian is in house 1.
+          <div class="pills"><span class="pill clue">from clue 9</span></div></div>
+        <div class="step">House 1 is taken — no other nationality can sit there.
+          <div class="pills"><span class="pill step">from step 1</span></div></div>
+      </div>
+    </div>
+    <div class="echo">oracle-guided · every step cites its clues and prior steps · no visible backtracking</div>
+  </section>
+
+  <!-- 6 ─ Section break ---------------------------------------------------- -->
+  <section class="slide section" data-who="Bhavay · ~20s" data-notes="section">
+    <div class="leopard"><b></b><b></b><b></b><b></b><b></b><b></b></div>
+    <div class="kicker">The Principle</div>
+    <h2 class="title">Composition<br>over Inheritance</h2>
+    <div class="subtitle">Grow behaviour by adding a part — not by editing a class tree.</div>
+  </section>
+
+  <!-- 7 ─ Four Seams ------------------------------------------------------- -->
+  <section class="slide" data-who="Bhavay · ~50s" data-notes="seams">
+    <div class="kicker">Where We Applied It</div>
+    <div class="seams">
+      <div class="seam"><div class="n">01</div><div class="t">Clues = data + handler objects</div></div>
+      <div class="seam"><div class="n">02</div><div class="t">A registry, not a base class</div></div>
+      <div class="seam"><div class="n">03</div><div class="t">Inference rules = objects in a list</div></div>
+      <div class="seam"><div class="n">04</div><div class="t">SAT solver = injected interface</div></div>
+    </div>
+  </section>
+
+  <!-- 8 ─ Code: Clues as Data + Registry ---------------------------------- -->
+  <section class="slide" data-who="Bhavay · ~70s" data-notes="code">
+    <div class="kicker">Seam 01 — In Code</div>
+    <div class="code"><span class="k">const</span> C7: <span class="ty">ClueHandler</span> = {
+  type: <span class="s">'C7'</span>,
+  inferenceRule: <span class="s">'R3'</span>,
+  relation: (px, py) =&gt; <span class="ty">Math</span>.<span class="fn">abs</span>(px - py) === <span class="ty">1</span>,
+  encode: (c, ctx) =&gt; <span class="c">/* … */</span>,
+};
+<span class="k">const</span> REGISTRY = <span class="k">new</span> <span class="ty">Map</span>(ALL_HANDLERS.<span class="fn">map</span>(h =&gt; [h.type, h]));</div>
+    <div class="payoff">Add a 10th clue type = <b>one new object</b>. Zero edits to encoder, engine, validator.</div>
+    <div class="fileref">src/core/clues/handlers.ts · registry.ts</div>
+  </section>
+
+  <!-- 9 ─ Where We Stand --------------------------------------------------- -->
+  <section class="slide" data-who="Bhavay → demo · ~35s" data-notes="stand">
+    <div class="kicker">Where We Stand</div>
+    <div class="stand">
+      <div>Spec, <b>met.</b></div>
+      <div>Reasoning, <b>readable.</b></div>
+      <div>Architecture, <b>additive.</b></div>
+    </div>
+    <div class="ask">Now — let's solve one live.</div>
+    <div class="echo">9/9 clue types · 3 outcomes · 126 tests · 91% core coverage</div>
+  </section>
+
+</div>
+
+<div id="badge"></div>
+<div id="counter"></div>
+<div id="hint">← → navigate · S notes · F fullscreen · P print</div>
+
+<div id="notes"></div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var i = 0;
+  var stage = document.getElementById('stage');
+  var counter = document.getElementById('counter');
+  var badge = document.getElementById('badge');
+  var notesEl = document.getElementById('notes');
+
+  // ---- speaker notes (kept out of the slides; toggled with S) -------------
+  var NOTES = {
+    cover: { meta:"Slide 1 · Abhijai · ~20s",
+      html:"<p>You wrote the spec; we built it. In the next eight minutes: what we shipped, the honest calls we made where the spec was silent, and how we leaned on Composition over Inheritance — the principle you sent from the bush. We'll finish by solving Einstein's riddle live.</p>" },
+    brief: { meta:"Slide 2 · Abhijai · ~35s",
+      html:"<p>Three jobs. <b>Define</b> a puzzle — categories, values, clues. <b>Solve</b> it — a real SAT solver finds and <em>verifies</em> the answer. But the novelty you specified isn't solving; it's <b>Explain</b> — a step-by-step, human-readable proof. Anyone can print an answer. We show the reasoning.</p>" },
+    spec: { meta:"Slide 3 · Abhijai · ~45s",
+      html:"<p>Against your spec: all nine clue types, exactly — no more, no less. All three outcomes detected — unique, under-constrained, over-constrained. Everything runs client-side in a Web Worker with your 10-second timeout. 126 automated tests, 91% coverage on the core. This isn't a mock-up; it's the spec, executed.</p>" },
+    assumptions: { meta:"Slide 4 · Abhijai → hands to Bhavay · ~45s",
+      html:"<p>Four places your spec left room, and our calls — all written up in ASSUMPTIONS.md. The decisive one: the spec said X ≠ Y means <em>different categories</em>, but your own mandatory zebra example needs 'green is immediately left of white' — two values of the <em>same</em> category. So we bound ≠ to different <em>cells</em>. The rest: a MiniSat-backed package, an OpenRouter proxy to respect budget, and the zebra proof runs longer than 30 steps but every step is cited and correct.</p><p><b>Handoff:</b> “Bhavay will show you how it reasons.”</p>" },
+    reasoning: { meta:"Slide 5 · Bhavay · ~60s",
+      html:"<p>Here's the heart of it. The SAT solver gives us the answer — but a SAT proof is unreadable. So a <em>separate</em> inference engine re-derives the solution the way a person would: 'From clue 9, the Norwegian is in house 1. Since house 1 is taken, no other nationality can be there.' Each step cites the clues and prior steps it depends on. And we use the SAT answer as an <b>oracle</b> — when the engine has to guess, it always guesses right, so the narrative never shows messy backtracking. That's the product.</p>" },
+    section: { meta:"Slide 6 · Bhavay · ~20s",
+      html:"<p>Now the principle you asked about. Our one-line version: <b>we add behaviour by adding a small part, never by deepening a class hierarchy.</b> Four places we did this — here's the clearest.</p>" },
+    seams: { meta:"Slide 7 · Bhavay · ~50s",
+      html:"<p>Four seams. <b>One:</b> clues are plain data plus handler objects — not a <code>Clue</code> superclass with nine subclasses. <b>Two:</b> a registry maps a clue's type to its handler, so the encoder, the engine, the validator and the UI all just <em>ask the registry</em> — none holds a base-class reference. <b>Three:</b> the six inference rules are objects in a priority array — reprioritising is reordering a list. <b>Four:</b> the SAT solver sits behind an interface we inject, so we can swap it or fake it in tests. Let me show you the first one in code.</p>" },
+    code: { meta:"Slide 8 · Bhavay · ~70s",
+      html:"<p>This is clue C7, 'next to'. It's an <em>object</em>: its type tag, which inference rule it feeds, its position relation as a one-line function, and how to encode it. All nine clues are objects like this in one array; the registry is built from that array. The payoff is the whole argument: to add a tenth clue type, I write <em>one</em> object and append it. The encoder, the inference engine, the validator, the UI — <b>none of them change</b>, because none of them switch on clue type; they ask the registry. With inheritance that's a new subclass plus edits scattered across every consumer. Here it's additive. That's composition earning its keep.</p>" },
+    stand: { meta:"Slide 9 · Bhavay → demo handoff · ~35s",
+      html:"<p>So: faithful to your spec, a solver that explains itself, and an architecture that grows by addition. To prove it's not slideware — Abhijai will solve Einstein's riddle live.</p>"
+        +"<p><b>Demo (Abhijai, ~2 min):</b> 1) Load <b>Zebra</b> → Solve (“6 categories, 15 clues, solved & verified in &lt;1s”). 2) <b>Scrub the deduction chain</b> 3–4 steps. 3) Load <b>Contradiction</b> → show the <b>MUS</b> red banner. 4) Load <b>Ambiguous</b> → two solutions side-by-side. Fallback: static zebra screenshot.</p>"
+        +"<p class='q'><b>Q&amp;A prep:</b> Zebra=60 steps → faithful R2 template, folding is a tuning toggle. · OpenRouter not Anthropic → budget, identical contract, one env var to switch. · Composition cost → one layer of indirection; still use classes for state, anti-deep-hierarchy not anti-OOP. · Scaling → spec-bounded, &lt;100ms; MUS heaviest at ≤50 solver calls, still sub-second. · LLM in trust path? → no, user confirms every parse, structured form is source of truth, works offline.</p>" }
+  };
+
+  function scale(){
+    var s = Math.min(window.innerWidth/1280, window.innerHeight/720);
+    slides.forEach(function(el){ el.style.transform = 'scale('+s+')'; });
+  }
+  function render(){
+    slides.forEach(function(el,n){ el.classList.toggle('active', n===i); });
+    counter.textContent = String(i+1).padStart(2,'0') + ' / ' + String(slides.length).padStart(2,'0');
+    var who = slides[i].getAttribute('data-who') || '';
+    badge.innerHTML = '<span class="who">▍</span> ' + who;
+    var key = slides[i].getAttribute('data-notes');
+    var note = NOTES[key];
+    if(note){ notesEl.innerHTML = '<h4>Speaker notes</h4><div class="meta">'+note.meta+'</div>'+note.html; }
+    else { notesEl.innerHTML = ''; }
+  }
+  function go(n){ i = Math.max(0, Math.min(slides.length-1, n)); render(); }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); go(i+1); }
+    else if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); go(i-1); }
+    else if(e.key==='Home'){ go(0); }
+    else if(e.key==='End'){ go(slides.length-1); }
+    else if(e.key==='s' || e.key==='S'){ notesEl.classList.toggle('show'); }
+    else if(e.key==='f' || e.key==='F'){ if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); } else { document.exitFullscreen(); } }
+    else if(e.key==='p' || e.key==='P'){ window.print(); }
+    else if(/^[1-9]$/.test(e.key)){ go(parseInt(e.key,10)-1); }
+  });
+
+  // click right half = next, left half = prev
+  stage.addEventListener('click', function(e){
+    if(e.clientX > window.innerWidth/2) go(i+1); else go(i-1);
+  });
+
+  window.addEventListener('resize', scale);
+  scale(); render();
+})();
+</script>
+</body>
+</html>

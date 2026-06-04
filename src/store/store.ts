@@ -4,7 +4,7 @@
  * focused; solving is delegated to the worker client (§5.5).
  */
 import { create } from 'zustand';
-import { isBinaryClue } from '../core/types';
+import { isBinaryClue, isPositionalClue } from '../core/types';
 import type { Cell, Clue, Puzzle } from '../core/types';
 import { solveInWorker, type SolveOutcome } from '../worker/client';
 import { EXAMPLES } from '../examples';
@@ -182,11 +182,19 @@ export const useStore = create<AppState>()((set, get) => ({
       const categories = s.puzzle.categories.map((c) =>
         c.name === category ? { ...c, values: [...c.values, value] } : c,
       );
-      return withClearedSolve({ puzzle: { ...s.puzzle, categories } });
+      // Re-sync the position axis to the new common size (§5.1 bijection).
+      return withClearedSolve({ puzzle: syncPositionSize({ ...s.puzzle, categories }) });
     }),
 
   removeValue: (category, value) => {
     const s = get();
+    const cat = s.puzzle.categories.find((c) => c.name === category);
+    if (!cat) return;
+    // A category can't drop below the minimum puzzle size (§5.1: n ≥ 3).
+    if (cat.values.length <= 3) {
+      window.alert('Each category must keep at least 3 values (the minimum puzzle size).');
+      return;
+    }
     const affected = s.puzzle.clues.filter((c) => clueReferencesCell(c, { category, value }));
     if (
       affected.length > 0 &&
@@ -199,7 +207,10 @@ export const useStore = create<AppState>()((set, get) => ({
         c.name === category ? { ...c, values: c.values.filter((v) => v !== value) } : c,
       );
       const clues = s.puzzle.clues.filter((c) => !clueReferencesCell(c, { category, value }));
-      return withClearedSolve({ puzzle: { ...s.puzzle, categories, clues: reindex(clues) } });
+      // Re-sync the position axis to the new common size (§5.1 bijection).
+      return withClearedSolve({
+        puzzle: syncPositionSize({ ...s.puzzle, categories, clues: reindex(clues) }),
+      });
     });
   },
 
@@ -298,6 +309,30 @@ export const useStore = create<AppState>()((set, get) => ({
 }));
 
 // --- helpers ---------------------------------------------------------------
+
+/**
+ * Keep the position axis sized to the puzzle (§5.1 bijection). If every
+ * non-position category shares one length k ∈ [3,8], the position category is
+ * set to "1".."k" and any positional clue with k out of range is dropped.
+ * If the categories disagree in size, the position axis is left unchanged so the
+ * mismatch surfaces as a validation error (and an inline warning in the editor).
+ */
+function syncPositionSize(puzzle: Puzzle): Puzzle {
+  const attrs = puzzle.categories.filter((c) => c.name !== puzzle.positionCategory);
+  if (attrs.length === 0) return puzzle;
+  const k = attrs[0].values.length;
+  const uniform = attrs.every((c) => c.values.length === k);
+  if (!uniform || k < 3 || k > 8) return puzzle;
+
+  const categories = puzzle.categories.map((c) =>
+    c.name === puzzle.positionCategory
+      ? { ...c, values: Array.from({ length: k }, (_, i) => String(i + 1)) }
+      : c,
+  );
+  // If the axis shrank, drop positional clues whose target position is now gone.
+  const clues = reindex(puzzle.clues.filter((clue) => !isPositionalClue(clue) || clue.k <= k));
+  return { ...puzzle, categories, clues };
+}
 
 function positionCount(puzzle: Puzzle): number {
   return (

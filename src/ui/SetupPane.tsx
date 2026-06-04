@@ -28,6 +28,13 @@ export default function SetupPane() {
     moveClue,
   } = useStore.getState();
 
+  // Position auto-sizes only when every non-position category agrees on length.
+  const attrCats = puzzle.categories.filter((c) => c.name !== puzzle.positionCategory);
+  const attrSizesUniform = attrCats.every(
+    (c) => c.values.length === attrCats[0]?.values.length,
+  );
+  const attrSizes = attrCats.map((c) => `${c.name}: ${c.values.length}`).join(', ');
+
   return (
     <div className="space-y-4">
       <section>
@@ -90,9 +97,17 @@ export default function SetupPane() {
                 )}
               </div>
               {cat.name === puzzle.positionCategory ? (
-                <p className="mt-1 text-xs text-slate-400">
-                  Positions 1–{cat.values.length} (sized by other categories)
-                </p>
+                <div className="mt-1 text-xs">
+                  <p className="text-slate-400">
+                    Positions 1–{cat.values.length} — auto-sized to match the other categories.
+                  </p>
+                  {!attrSizesUniform && (
+                    <p className="mt-1 text-amber-600">
+                      Categories have different sizes ({attrSizes}). Give every category the
+                      same number of values to set the puzzle size.
+                    </p>
+                  )}
+                </div>
               ) : (
                 <ValueEditor
                   category={cat.name}

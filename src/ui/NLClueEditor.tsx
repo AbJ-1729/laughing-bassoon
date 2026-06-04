@@ -9,6 +9,8 @@ import { getClueHandler } from '../core/clues/registry';
 import { validatePuzzle } from '../core/validation';
 import { parseNaturalLanguage, type ParseResult } from './nl-client';
 import type { Clue } from '../core/types';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function NLClueEditor() {
   const puzzle = useStore((s) => s.puzzle);
@@ -54,53 +56,43 @@ export default function NLClueEditor() {
     getClueHandler(pending.clue.type).describe({ ...pending.clue, id: 0 } as Clue);
 
   return (
-    <div className="space-y-2 rounded border border-slate-200 p-2">
-      <textarea
+    <div className="space-y-2 rounded-md border p-2">
+      <Textarea
         aria-label="Natural-language clue"
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={2}
         placeholder="e.g. The Norwegian lives in the first house."
-        className="w-full rounded border border-slate-300 p-1 text-sm"
       />
-      <button
-        onClick={interpret}
-        disabled={busy}
-        className="w-full rounded bg-slate-800 px-2 py-1 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
-      >
+      <Button onClick={interpret} disabled={busy} size="sm" className="w-full">
         {busy ? 'Interpreting…' : 'Interpret'}
-      </button>
+      </Button>
 
       {error && (
         <div className="space-y-1">
-          <p className="text-xs text-rose-600">{error}</p>
-          <button
-            onClick={() => setMode('structured')}
-            className="text-xs text-sky-600 underline"
-          >
+          <p className="text-xs text-destructive">{error}</p>
+          <Button variant="link" size="sm" onClick={() => setMode('structured')} className="px-0">
             Switch to structured input
-          </button>
+          </Button>
         </div>
       )}
 
       {pending && (
-        <div className="space-y-2 rounded bg-sky-50 p-2">
+        <div className="space-y-2 rounded-md bg-accent p-2">
           <p className="text-sm">
             Interpreted as: <em>{preview}</em>
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
+              size="sm"
               onClick={confirm}
-              className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500"
+              className="bg-emerald-600 hover:bg-emerald-500"
             >
               Confirm &amp; add
-            </button>
-            <button
-              onClick={() => setPending(null)}
-              className="rounded border border-slate-300 px-2 py-1 text-xs"
-            >
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPending(null)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}

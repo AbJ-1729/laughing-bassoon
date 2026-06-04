@@ -1,12 +1,20 @@
 /**
  * Structured clue editor (SPECS §5.3, §6.1). Exposes exactly the 9 supported
  * clue types via the registry — no hard-coded list. Binary clues pick X and Y
- * cells; C3/C4 pick a cell and a position.
+ * cells; C3/C4 pick a cell and a position. Built on shadcn/ui primitives.
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { BinaryClue, Cell, Clue, ClueType, PositionalClue } from '../core/types';
 import { clueTypes, getClueHandler } from '../core/clues/registry';
 import { useStore } from '../store/store';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const POSITIONAL: ClueType[] = ['C3', 'C4'];
 
@@ -33,8 +41,7 @@ export default function ClueEditor() {
   const [k, setK] = useState(1);
 
   // When entering edit mode, load the selected clue into the form (§6.1 edit).
-  // When edit mode is cancelled (editingClueId → null, e.g. due to a rename
-  // mid-edit), reset to defaults so stale cell references don't linger.
+  // When edit mode is cancelled (editingClueId → null) reset to defaults.
   const editingClue = puzzle.clues.find((c) => c.id === editingClueId);
   useEffect(() => {
     if (editingClueId === null) {
@@ -52,7 +59,6 @@ export default function ClueEditor() {
     } else {
       setY((editingClue as BinaryClue).y);
     }
-    // Only re-run when the edited clue id changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingClueId]);
 
@@ -70,56 +76,50 @@ export default function ClueEditor() {
   };
 
   return (
-    <div className="space-y-2 rounded border border-slate-200 p-2">
-      <select
-        aria-label="Clue type"
-        value={type}
-        onChange={(e) => setType(e.target.value as ClueType)}
-        className="w-full rounded border border-slate-300 p-1 text-sm"
-      >
-        {clueTypes().map((t) => (
-          <option key={t} value={t}>
-            {t} — {getClueHandler(t).name}
-          </option>
-        ))}
-      </select>
+    <div className="space-y-2 rounded-md border p-2">
+      <Select value={type} onValueChange={(v) => setType(v as ClueType)}>
+        <SelectTrigger aria-label="Clue type" className="h-8 text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {clueTypes().map((t) => (
+            <SelectItem key={t} value={t}>
+              {t} — {getClueHandler(t).name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <CellPicker label="X" cell={x} onChange={setX} />
 
       {isPositional ? (
-        <label className="block text-sm">
-          Position
-          <select
-            aria-label="Position"
-            value={k}
-            onChange={(e) => setK(Number(e.target.value))}
-            className="ml-2 rounded border border-slate-300 p-1"
-          >
-            {Array.from({ length: n }, (_, i) => i + 1).map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Position</span>
+          <Select value={String(k)} onValueChange={(v) => setK(Number(v))}>
+            <SelectTrigger aria-label="Position" className="h-8 w-24 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: n }, (_, i) => i + 1).map((p) => (
+                <SelectItem key={p} value={String(p)}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       ) : (
         <CellPicker label="Y" cell={y} onChange={setY} />
       )}
 
       <div className="flex gap-2">
-        <button
-          onClick={submit}
-          className="flex-1 rounded bg-slate-800 px-2 py-1 text-sm text-white hover:bg-slate-700"
-        >
+        <Button size="sm" className="flex-1" onClick={submit}>
           {editingClueId !== null ? 'Save changes' : 'Add clue'}
-        </button>
+        </Button>
         {editingClueId !== null && (
-          <button
-            onClick={cancelEditClue}
-            className="rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-50"
-          >
+          <Button size="sm" variant="outline" onClick={cancelEditClue}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -149,7 +149,7 @@ export function CellPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryExists]);
 
-  // If the referenced value was removed from the category, snap to the first value.
+  // If the referenced value was removed, snap to the first value.
   const valueExists = cat?.values.includes(cell.value) ?? false;
   useEffect(() => {
     if (categoryExists && !valueExists && cat && cat.values.length > 0) {
@@ -160,34 +160,40 @@ export function CellPicker({
 
   return (
     <div className="flex items-center gap-1 text-sm">
-      <span className="w-4 text-slate-500">{label}</span>
-      <select
-        aria-label={`${label} category`}
+      <span className="w-4 text-muted-foreground">{label}</span>
+      <Select
         value={cell.category}
-        onChange={(e) => {
-          const next = puzzle.categories.find((c) => c.name === e.target.value)!;
+        onValueChange={(v) => {
+          const next = puzzle.categories.find((c) => c.name === v)!;
           onChange({ category: next.name, value: next.values[0] });
         }}
-        className="flex-1 rounded border border-slate-300 p-1"
       >
-        {puzzle.categories.map((c) => (
-          <option key={c.name} value={c.name}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label={`${label} value`}
+        <SelectTrigger aria-label={`${label} category`} className="h-8 flex-1 text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {puzzle.categories.map((c) => (
+            <SelectItem key={c.name} value={c.name}>
+              {c.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
         value={cell.value}
-        onChange={(e) => onChange({ category: cell.category, value: e.target.value })}
-        className="flex-1 rounded border border-slate-300 p-1"
+        onValueChange={(v) => onChange({ category: cell.category, value: v })}
       >
-        {cat?.values.map((v) => (
-          <option key={v} value={v}>
-            {v}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger aria-label={`${label} value`} className="h-8 flex-1 text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {cat?.values.map((v) => (
+            <SelectItem key={v} value={v}>
+              {v}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

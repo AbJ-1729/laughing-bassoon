@@ -1,14 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// The dropdowns are shadcn/ui (Radix) Selects: open the trigger, then click the
+// option (role="option" in a portal) — not a native <select>.
 async function loadExample(page: Page, name: RegExp) {
-  await page.getByLabel('Load example').selectOption({ label: (await optionLabel(page, name)) });
-}
-
-async function optionLabel(page: Page, name: RegExp): Promise<string> {
-  const options = await page.getByLabel('Load example').locator('option').allTextContents();
-  const match = options.find((o) => name.test(o));
-  if (!match) throw new Error(`No example option matching ${name}`);
-  return match;
+  await page.getByLabel('Load example').click();
+  await page.getByRole('option', { name }).click();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -62,7 +58,8 @@ test('clue editing: load a clue, change it, save (§6.1)', async ({ page }) => {
   await expect(page.getByText('Ann is at position 1.')).toBeVisible();
   await page.getByRole('button', { name: 'Edit clue 1' }).click();
   // The structured editor loads the clue; change the position to 2 and save.
-  await page.getByLabel('Position', { exact: true }).selectOption('2');
+  await page.getByLabel('Position', { exact: true }).click();
+  await page.getByRole('option', { name: '2', exact: true }).click();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Ann is at position 2.')).toBeVisible();
   await expect(page.getByText('Ann is at position 1.')).toHaveCount(0);

@@ -53,6 +53,16 @@ test('ill-formed puzzle is rejected with a clear error', async ({ page }) => {
   await expect(page.getByText(/not well-formed/i).first()).toBeVisible({ timeout: 15_000 });
 });
 
+test('New starts a blank custom puzzle', async ({ page }) => {
+  await loadExample(page, /Coffee Shop/);
+  await expect(page.getByText('Ann is at position 1.')).toBeVisible();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  // Blank puzzle has no clues and a default title.
+  await expect(page.getByText('Ann is at position 1.')).toHaveCount(0);
+  await expect(page.getByText(/^Clues \(0\)/)).toBeVisible();
+  await expect(page.getByLabel('Puzzle title')).toHaveValue('Untitled puzzle');
+});
+
 test('clue editing: load a clue, change it, save (§6.1)', async ({ page }) => {
   await loadExample(page, /Coffee Shop/);
   await expect(page.getByText('Ann is at position 1.')).toBeVisible();

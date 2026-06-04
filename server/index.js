@@ -89,7 +89,18 @@ app.post('/api/parse', async (req, res) => {
         messages: [{ role: 'user', content: buildPrompt(text, schema) }],
       }),
     });
-    if (!r.ok) return res.status(502).json({ error: 'LLM upstream error' });
+    if (!r.ok) {
+      const detail = await r.text().catch(() => '');
+      console.error(`OpenRouter ${r.status} for model ${MODEL}: ${detail}`);
+      let message = `LLM upstream error (HTTP ${r.status})`;
+      try {
+        const m = JSON.parse(detail)?.error?.message;
+        if (m) message += `: ${m}`;
+      } catch {
+        /* non-JSON body */
+      }
+      return res.status(502).json({ error: message });
+    }
     const data = await r.json();
     const raw = stripFences((data.choices?.[0]?.message?.content ?? '').trim());
     let parsed;
